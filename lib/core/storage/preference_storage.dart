@@ -4,6 +4,7 @@ class PreferenceStorage {
   static const _rememberMeKey = 'remember_me';
   static const _lastLoginKey = 'last_login';
   static const _notificationsEnabledKey = 'notifications_enabled';
+  static const _languageCodeKey = 'language_code';
 
   Future<void> saveRememberMe(bool value) async {
     final preferences = await SharedPreferences.getInstance();
@@ -39,5 +40,15 @@ class PreferenceStorage {
   Future<bool> getNotificationsEnabled() async {
     final preferences = await SharedPreferences.getInstance();
     return preferences.getBool(_notificationsEnabledKey) ?? true;
+  }
+
+  Future<void> saveLanguageCode(String value) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_languageCodeKey, value);
+  }
+
+  Future<String?> getLanguageCode() async {
+    final preferences = await SharedPreferences.getInstance();
+    return preferences.getString(_languageCodeKey);
   }
 }
