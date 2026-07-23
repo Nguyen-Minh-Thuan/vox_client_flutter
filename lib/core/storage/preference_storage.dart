@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class PreferenceStorage {
   static const _rememberMeKey = 'remember_me';
   static const _lastLoginKey = 'last_login';
+  static const _notificationsEnabledKey = 'notifications_enabled';
 
   Future<void> saveRememberMe(bool value) async {
     final preferences = await SharedPreferences.getInstance();
@@ -28,5 +29,15 @@ class PreferenceStorage {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_rememberMeKey);
     await preferences.remove(_lastLoginKey);
+  }
+
+  Future<void> saveNotificationsEnabled(bool value) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool(_notificationsEnabledKey, value);
+  }
+
+  Future<bool> getNotificationsEnabled() async {
+    final preferences = await SharedPreferences.getInstance();
+    return preferences.getBool(_notificationsEnabledKey) ?? true;
   }
 }
