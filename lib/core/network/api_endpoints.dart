@@ -1,9 +1,12 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiEndpoints {
+  static String baseUrl = dotenv.get('API_URL');
+
   static String get graphqlBaseUrl => baseUrl.replaceFirst(RegExp(r'/api/?$'), '');
 
   static const String login = "/v1/auth/login";
+  static const String logout = "/v1/auth/logout";
   static const String pushToken = "/v1/devices/push-token";
 
   static const String classTests = "/v1/class-tests";

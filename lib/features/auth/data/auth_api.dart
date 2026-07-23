@@ -21,4 +21,8 @@ class AuthApi {
     var data = response.data['data'];
     return LoginResponse.fromJson(data);
   }
+
+  Future<void> logout() async {
+    await _apiClient.post(ApiEndpoints.logout);
+  }
 }
