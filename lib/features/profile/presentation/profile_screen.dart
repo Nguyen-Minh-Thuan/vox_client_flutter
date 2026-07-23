@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
-class ProfileScreen extends StatelessWidget {
+import '../../../app/app.dart';
+import '../../../app/router.dart';
+import '../../../app/theme.dart';
+import '../../../app/widgets.dart';
   const ProfileScreen({super.key});
   
   @override
