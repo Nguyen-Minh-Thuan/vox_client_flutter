@@ -1,4 +1,6 @@
-import 'models/exam_recording.dart';
+import 'models/exam_attempt_summary.dart';
+import 'models/exam_item_response.dart';
+import 'models/exam_response_item.dart';
 import 'recordings_api.dart';
 
 class RecordingsRepository {
@@ -6,6 +8,12 @@ class RecordingsRepository {
 
   final RecordingsApi _recordingsApi;
 
-  Future<List<ExamRecording>> getMyRecordings() =>
-      _recordingsApi.getMyRecordings();
+  Future<List<ExamAttemptSummary>> getMyAttempts() =>
+      _recordingsApi.getMyAttempts();
+
+  Future<List<ExamResponseItem>> getSessionItems(String sessionId) =>
+      _recordingsApi.getSessionItems(sessionId);
+
+  Future<ExamItemResponse> getItemResponse(String answerId) =>
+      _recordingsApi.getItemResponse(answerId);
 }
