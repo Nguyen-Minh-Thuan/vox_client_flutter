@@ -35,8 +35,11 @@ class _SpeakingScreenState extends State<SpeakingScreen>
   }
 
   void _submit() {
+    // TODO: wire to the real session once this screen drives an actual exam attempt.
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ResultsScreen()),
+      MaterialPageRoute(
+        builder: (_) => const ResultsScreen(sessionId: '', examName: ''),
+      ),
     );
   }
 

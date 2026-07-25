@@ -1,4 +1,5 @@
 import '../../../core/network/graphql_client.dart';
+import 'models/exam_candidate_result.dart';
 import 'models/exam_result_summary.dart';
 
 class ResultApi {
@@ -9,23 +10,35 @@ class ResultApi {
   Future<List<ExamResultSummary>> getMyExamResults() async {
     final data = await _client.query('''
       query MyExamResults {
-        myExamResults(size: 100) {
-          content {
-            id
-            totalScore
-            status
-            releasedAt
-            createdAt
-            exam { id name }
-          }
+        myExamResults {
+          sessionId
+          examName
+          totalScore
+          resultStatus
+          submittedAt
         }
       }
     ''');
 
-    final content =
-        (data['myExamResults'] as Map<String, dynamic>)['content'] as List;
-    return content
+    final results = data['myExamResults'] as List;
+    return results
         .map((e) => ExamResultSummary.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<ExamCandidateResult> getSessionResult(String sessionId) async {
+    final data = await _client.query('''
+      query ExamSessionResult(\$sessionId: ID!) {
+        examSessionResult(sessionId: \$sessionId) {
+          scoreVisible
+          totalScore
+          status
+          sections { title score }
+        }
+      }
+    ''', variables: {'sessionId': sessionId});
+
+    return ExamCandidateResult.fromJson(
+        data['examSessionResult'] as Map<String, dynamic>);
   }
 }

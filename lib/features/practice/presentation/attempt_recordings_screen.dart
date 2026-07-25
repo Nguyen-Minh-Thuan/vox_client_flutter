@@ -56,9 +56,9 @@ class _AttemptRecordingsScreenState extends State<AttemptRecordingsScreen> {
       final items = await _repository.getSessionItems(widget.sessionId);
       if (!mounted) return;
       setState(() => _items = items);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not load this attempt.');
+      setState(() => _error = 'Could not load this attempt.\n$e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

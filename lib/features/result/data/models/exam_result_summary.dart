@@ -6,40 +6,39 @@ enum ExamResultStatus {
   final_,
   invalid,
   retakeRequired,
+  passed,
+  failed,
 }
 
+/// One past exam attempt, from `myExamResults` (StudentExamResultSummary).
 class ExamResultSummary {
   const ExamResultSummary({
-    required this.id,
+    required this.sessionId,
     required this.examName,
     required this.totalScore,
     required this.status,
-    required this.createdAt,
-    this.releasedAt,
+    required this.submittedAt,
   });
 
-  final String id;
+  final String sessionId;
   final String examName;
   final double? totalScore;
   final ExamResultStatus status;
-  final DateTime createdAt;
-  final DateTime? releasedAt;
+  final DateTime? submittedAt;
 
   factory ExamResultSummary.fromJson(Map<String, dynamic> json) {
-    final exam = json['exam'] as Map<String, dynamic>?;
     return ExamResultSummary(
-      id: json['id'] as String,
-      examName: exam?['name'] as String? ?? 'Exam',
+      sessionId: json['sessionId'] as String,
+      examName: json['examName'] as String? ?? 'Exam',
       totalScore: (json['totalScore'] as num?)?.toDouble(),
-      status: _statusFromJson(json['status'] as String?),
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
-      releasedAt: json['releasedAt'] == null
-          ? null
-          : DateTime.tryParse(json['releasedAt'] as String),
+      status: statusFromJson(json['resultStatus'] as String?),
+      submittedAt: json['submittedAt'] != null
+          ? DateTime.tryParse(json['submittedAt'] as String)
+          : null,
     );
   }
 
-  static ExamResultStatus _statusFromJson(String? value) {
+  static ExamResultStatus statusFromJson(String? value) {
     switch (value) {
       case 'RELEASED':
         return ExamResultStatus.released;
@@ -53,6 +52,10 @@ class ExamResultSummary {
         return ExamResultStatus.invalid;
       case 'RETAKE_REQUIRED':
         return ExamResultStatus.retakeRequired;
+      case 'PASSED':
+        return ExamResultStatus.passed;
+      case 'FAILED':
+        return ExamResultStatus.failed;
       case 'PENDING_REVIEW':
       default:
         return ExamResultStatus.pendingReview;

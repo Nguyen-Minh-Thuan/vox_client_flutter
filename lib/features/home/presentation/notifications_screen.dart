@@ -126,7 +126,8 @@ class _NotifTile extends StatelessWidget {
   void _go(BuildContext context) {
     NotificationStore.instance.markRead(n.id);
     Widget? page = switch (n.target) {
-      NTarget.results => const ResultsScreen(),
+      // TODO: notifications carry no sessionId yet; wire once they do.
+      NTarget.results => null,
       NTarget.appeals => const AppealsScreen(),
       NTarget.speaking => const SpeakingScreen(),
       // TODO: no exam-detail screen exists yet; navigate there once it does.

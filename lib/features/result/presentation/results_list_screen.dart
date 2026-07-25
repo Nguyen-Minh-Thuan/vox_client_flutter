@@ -97,7 +97,7 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
   }
 }
 
-extension _StatusMeta on ExamResultStatus {
+extension ResultStatusMeta on ExamResultStatus {
   String get label => switch (this) {
         ExamResultStatus.pendingReview => 'Pending review',
         ExamResultStatus.released => 'Released',
@@ -106,6 +106,8 @@ extension _StatusMeta on ExamResultStatus {
         ExamResultStatus.final_ => 'Final',
         ExamResultStatus.invalid => 'Invalid',
         ExamResultStatus.retakeRequired => 'Retake required',
+        ExamResultStatus.passed => 'Passed',
+        ExamResultStatus.failed => 'Failed',
       };
   Color get fg => switch (this) {
         ExamResultStatus.pendingReview => AppColors.warnFg,
@@ -115,6 +117,8 @@ extension _StatusMeta on ExamResultStatus {
         ExamResultStatus.final_ => AppColors.success,
         ExamResultStatus.invalid => AppColors.muted,
         ExamResultStatus.retakeRequired => AppColors.warnFg,
+        ExamResultStatus.passed => AppColors.success,
+        ExamResultStatus.failed => AppColors.warnFg,
       };
   Color get bg => switch (this) {
         ExamResultStatus.pendingReview => AppColors.warnBg,
@@ -124,6 +128,8 @@ extension _StatusMeta on ExamResultStatus {
         ExamResultStatus.final_ => const Color(0xFFECFDF5),
         ExamResultStatus.invalid => AppColors.chipNeutralBg,
         ExamResultStatus.retakeRequired => AppColors.warnBg,
+        ExamResultStatus.passed => const Color(0xFFECFDF5),
+        ExamResultStatus.failed => AppColors.warnBg,
       };
   IconData get icon => switch (this) {
         ExamResultStatus.pendingReview => Icons.hourglass_empty,
@@ -133,6 +139,8 @@ extension _StatusMeta on ExamResultStatus {
         ExamResultStatus.final_ => Icons.check_circle,
         ExamResultStatus.invalid => Icons.cancel_outlined,
         ExamResultStatus.retakeRequired => Icons.replay,
+        ExamResultStatus.passed => Icons.check_circle,
+        ExamResultStatus.failed => Icons.cancel_outlined,
       };
 }
 
@@ -144,7 +152,12 @@ class _ResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const ResultsScreen()),
+        MaterialPageRoute(
+          builder: (_) => ResultsScreen(
+            sessionId: result.sessionId,
+            examName: result.examName,
+          ),
+        ),
       ),
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -175,7 +188,7 @@ class _ResultCard extends StatelessWidget {
                       _StatusPill(result.status),
                       const SizedBox(width: 8),
                       Text(
-                        _formatDate(result.releasedAt ?? result.createdAt),
+                        _formatDate(result.submittedAt),
                         style: const TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                     ],
@@ -200,8 +213,9 @@ class _ResultCard extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  String _formatDate(DateTime? date) => date == null
+      ? ''
+      : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
 class _StatusPill extends StatelessWidget {

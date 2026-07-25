@@ -37,9 +37,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       final attempts = await _repository.getMyAttempts();
       if (!mounted) return;
       setState(() => _attempts = attempts);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not load recordings.');
+      setState(() => _error = 'Could not load recordings.\n$e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

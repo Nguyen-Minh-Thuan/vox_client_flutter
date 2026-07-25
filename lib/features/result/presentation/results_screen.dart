@@ -2,20 +2,57 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
 import '../../../app/widgets.dart';
-import '../../appeal/presentation/appeals_screen.dart';
+import '../../../core/network/graphql_client.dart';
+import '../../practice/presentation/attempt_recordings_screen.dart';
+import '../data/models/exam_candidate_result.dart';
+import '../data/result_api.dart';
+import '../data/result_repository.dart';
+import 'results_list_screen.dart' show ResultStatusMeta;
 
-/// Results / Performance Review screen shown after a speaking practice or exam.
-class ResultsScreen extends StatelessWidget {
-  const ResultsScreen({super.key});
+/// Results / Performance Review screen shown after a speaking exam attempt.
+class ResultsScreen extends StatefulWidget {
+  const ResultsScreen({
+    super.key,
+    required this.sessionId,
+    required this.examName,
+  });
 
-  // Per-criterion scores (0–10) with the school's default weights.
-  static const _criteria = [
-    _Criterion('Pronunciation', 8.0, 0.25, AppColors.indigo),
-    _Criterion('Fluency', 7.5, 0.20, AppColors.secondary),
-    _Criterion('Grammar', 7.0, 0.20, AppColors.accent),
-    _Criterion('Vocabulary', 8.5, 0.20, AppColors.success),
-    _Criterion('Content', 7.5, 0.15, AppColors.warning),
-  ];
+  final String sessionId;
+  final String examName;
+
+  @override
+  State<ResultsScreen> createState() => _ResultsScreenState();
+}
+
+class _ResultsScreenState extends State<ResultsScreen> {
+  final _repository = ResultRepository(ResultApi(GraphQLClient()));
+
+  bool _loading = true;
+  String? _error;
+  ExamCandidateResult? _result;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final result = await _repository.getSessionResult(widget.sessionId);
+      if (!mounted) return;
+      setState(() => _result = result);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = 'Could not load this result.\n$e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,24 +75,56 @@ class ResultsScreen extends StatelessWidget {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.ios_share, size: 20, color: AppColors.dark),
-            onPressed: () {},
-          ),
-        ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        children: [
-          const _ScoreHero(),
-          const SizedBox(height: 20),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_error!,
+                          style: const TextStyle(color: AppColors.muted)),
+                      const SizedBox(height: 8),
+                      TextButton(onPressed: _load, child: const Text('Retry')),
+                    ],
+                  ),
+                )
+              : _buildBody(context, _result!),
+    );
+  }
 
-          // ── Recording playback ──
-          const _RecordingBar(),
+  Widget _buildBody(BuildContext context, ExamCandidateResult result) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      children: [
+        _ScoreHero(examName: widget.examName, result: result),
+        const SizedBox(height: 20),
+        OutlinedButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => AttemptRecordingsScreen(
+                sessionId: widget.sessionId,
+                examName: widget.examName,
+              ),
+            ),
+          ),
+          icon: const Icon(Icons.mic, size: 18),
+          label: const Text('View recordings'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.indigo,
+            side: const BorderSide(color: Color(0xFFE2E8F0)),
+            minimumSize: const Size(double.infinity, 48),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(99),
+            ),
+            textStyle:
+                const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+        ),
+        if (result.sections.isNotEmpty) ...[
           const SizedBox(height: 24),
-
-          const SectionLabel('Criteria Breakdown'),
+          const SectionLabel('Section Breakdown'),
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
@@ -66,94 +135,39 @@ class ResultsScreen extends StatelessWidget {
             ),
             child: Column(
               children: [
-                for (int i = 0; i < _criteria.length; i++) ...[
-                  _CriterionRow(_criteria[i]),
-                  if (i != _criteria.length - 1)
+                for (int i = 0; i < result.sections.length; i++) ...[
+                  _SectionRow(result.sections[i]),
+                  if (i != result.sections.length - 1)
                     const Divider(height: 1, color: Color(0xFFF1F5F9)),
                 ],
               ],
             ),
           ),
-          const SizedBox(height: 24),
-
-          // ── AI feedback ──
-          const SectionLabel('AI Feedback'),
-          const SizedBox(height: 14),
-          const _FeedbackCard(
-            tone: _FeedbackTone.good,
-            title: 'Strong vocabulary range',
-            body: 'You used varied, topic-appropriate words like '
-                '"algorithm" and "misinformation" naturally.',
-          ),
-          const SizedBox(height: 10),
-          const _FeedbackCard(
-            tone: _FeedbackTone.improve,
-            title: 'Watch your pacing',
-            body: 'A few long pauses between ideas lowered your fluency '
-                'score. Try linking phrases with "because" or "so".',
-          ),
-          const SizedBox(height: 28),
-
-          // ── Actions ──
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.indigo,
-                    side: const BorderSide(color: Color(0xFFE2E8F0)),
-                    minimumSize: const Size(0, 52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    textStyle: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w600),
-                  ),
-                  child: const Text('Try again'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.indigo,
-                    minimumSize: const Size(0, 52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    textStyle: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700),
-                  ),
-                  child: const Text('Done'),
-                ),
-              ),
-            ],
-          ),
-          // const SizedBox(height: 14),
-          // Center(
-          //   child: TextButton.icon(
-          //     onPressed: () => Navigator.of(context).push(
-          //       MaterialPageRoute(builder: (_) => const AppealsScreen()),
-          //     ),
-          //     icon: const Icon(Icons.gavel_outlined, size: 17),
-          //     label: const Text('Disagree with this score? Request re-evaluation'),
-          //     style: TextButton.styleFrom(
-          //       foregroundColor: AppColors.muted,
-          //       textStyle:
-          //           const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          //     ),
-          //   ),
-          // ),
         ],
-      ),
+        const SizedBox(height: 28),
+        FilledButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.indigo,
+            minimumSize: const Size(double.infinity, 52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(99),
+            ),
+            textStyle:
+                const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+          child: const Text('Done'),
+        ),
+      ],
     );
   }
 }
 
 class _ScoreHero extends StatelessWidget {
-  const _ScoreHero();
+  const _ScoreHero({required this.examName, required this.result});
+
+  final String examName;
+  final ExamCandidateResult result;
 
   @override
   Widget build(BuildContext context) {
@@ -170,39 +184,50 @@ class _ScoreHero extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            'TALKING ABOUT SOCIAL MEDIA · UNIT 3',
+            examName.toUpperCase(),
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
-              color: Colors.white.withOpacity(0.75),
+              color: Colors.white.withValues(alpha: 0.75),
             ),
           ),
           const SizedBox(height: 18),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              const Text(
-                '7.7',
-                style: TextStyle(
-                  fontSize: 60,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  height: 1,
+          if (result.scoreVisible && result.totalScore != null)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  result.totalScore!.toStringAsFixed(1),
+                  style: const TextStyle(
+                    fontSize: 60,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    height: 1,
+                  ),
                 ),
-              ),
-              Text(
-                ' / 10',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white.withOpacity(0.7),
+                Text(
+                  ' / 10',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
                 ),
+              ],
+            )
+          else
+            const Text(
+              'Score not released yet',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
               ),
-            ],
-          ),
+            ),
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
@@ -210,12 +235,12 @@ class _ScoreHero extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(99),
             ),
-            child: const Text(
-              'Good · Above class average',
+            child: Text(
+              result.status.label,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: AppColors.indigo,
+                color: result.status.fg,
               ),
             ),
           ),
@@ -225,84 +250,9 @@ class _ScoreHero extends StatelessWidget {
   }
 }
 
-class _RecordingBar extends StatelessWidget {
-  const _RecordingBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
-              color: AppColors.indigo,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.play_arrow, color: Colors.white, size: 26),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Your recording',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.dark,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(99),
-                  child: Container(
-                    height: 4,
-                    color: const Color(0xFFE2E8F0),
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: 0.0,
-                      child: Container(color: AppColors.indigo),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            '0:48',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.muted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Criterion {
-  const _Criterion(this.name, this.score, this.weight, this.color);
-  final String name;
-  final double score;
-  final double weight;
-  final Color color;
-}
-
-class _CriterionRow extends StatelessWidget {
-  const _CriterionRow(this.c);
-  final _Criterion c;
+class _SectionRow extends StatelessWidget {
+  const _SectionRow(this.section);
+  final ExamCandidateResultSection section;
 
   @override
   Widget build(BuildContext context) {
@@ -310,24 +260,14 @@ class _CriterionRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 14),
       child: Row(
         children: [
-          SizedBox(
-            width: 116,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  c.name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.dark,
-                  ),
-                ),
-                Text(
-                  '${(c.weight * 100).round()}% weight',
-                  style: const TextStyle(fontSize: 11, color: AppColors.muted),
-                ),
-              ],
+          Expanded(
+            child: Text(
+              section.title ?? 'Section',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.dark,
+              ),
             ),
           ),
           Expanded(
@@ -338,8 +278,8 @@ class _CriterionRow extends StatelessWidget {
                 color: const Color(0xFFF1F5F9),
                 child: FractionallySizedBox(
                   alignment: Alignment.centerLeft,
-                  widthFactor: c.score / 10,
-                  child: Container(color: c.color),
+                  widthFactor: (section.score / 10).clamp(0.0, 1.0),
+                  child: Container(color: AppColors.indigo),
                 ),
               ),
             ),
@@ -347,7 +287,7 @@ class _CriterionRow extends StatelessWidget {
           SizedBox(
             width: 42,
             child: Text(
-              c.score.toStringAsFixed(1),
+              section.score.toStringAsFixed(1),
               textAlign: TextAlign.right,
               style: const TextStyle(
                 fontSize: 15,
@@ -355,76 +295,6 @@ class _CriterionRow extends StatelessWidget {
                 color: AppColors.dark,
                 fontFeatures: [FontFeature.tabularFigures()],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-enum _FeedbackTone { good, improve }
-
-class _FeedbackCard extends StatelessWidget {
-  const _FeedbackCard({
-    required this.tone,
-    required this.title,
-    required this.body,
-  });
-
-  final _FeedbackTone tone;
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    final good = tone == _FeedbackTone.good;
-    final color = good ? AppColors.success : AppColors.warning;
-    final bg = good ? const Color(0xFFECFDF5) : AppColors.warnBg;
-    final icon = good ? Icons.check_circle : Icons.lightbulb_outline;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 20, color: color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.dark,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  body,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    height: 1.5,
-                    color: AppColors.muted,
-                  ),
-                ),
-              ],
             ),
           ),
         ],
