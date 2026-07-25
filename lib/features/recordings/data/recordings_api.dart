@@ -53,6 +53,14 @@ class RecordingsApi {
           durationSeconds
           transcript
           submittedAt
+          turns {
+            id
+            turnOrder
+            promptText
+            audioUrl
+            transcript
+            durationSeconds
+          }
         }
       }
     ''', variables: {'answerId': answerId});

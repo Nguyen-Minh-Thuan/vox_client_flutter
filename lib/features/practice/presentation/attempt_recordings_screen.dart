@@ -9,6 +9,7 @@ import '../../recordings/data/recordings_api.dart';
 import '../../recordings/data/recordings_repository.dart';
 
 /// Item responses within one exam attempt, with lazy-loaded playback.
+/// Each item may itself be multiple turns (AI follow-up ↔ student reply).
 class AttemptRecordingsScreen extends StatefulWidget {
   const AttemptRecordingsScreen({
     super.key,
@@ -32,8 +33,10 @@ class _AttemptRecordingsScreenState extends State<AttemptRecordingsScreen> {
   String? _error;
   List<ExamResponseItem> _items = const [];
 
-  String? _playingId;
+  String? _expandedId;
   final Map<String, ExamItemResponse> _details = {};
+
+  String? _playingKey;
 
   @override
   void initState() {
@@ -64,30 +67,38 @@ class _AttemptRecordingsScreenState extends State<AttemptRecordingsScreen> {
     }
   }
 
-  Future<void> _togglePlay(ExamResponseItem item) async {
-    if (_playingId == item.responseId) {
-      await _player.pause();
-      setState(() => _playingId = null);
+  Future<void> _toggleExpand(ExamResponseItem item) async {
+    if (_expandedId == item.responseId) {
+      setState(() => _expandedId = null);
       return;
     }
-    setState(() => _playingId = item.responseId);
+    setState(() => _expandedId = item.responseId);
+    if (_details.containsKey(item.responseId)) return;
     try {
-      var detail = _details[item.responseId];
-      if (detail == null) {
-        detail = await _repository.getItemResponse(item.responseId);
-        if (!mounted) return;
-        _details[item.responseId] = detail;
-      }
-      if (detail.audioUrl == null) {
-        setState(() => _playingId = null);
-        return;
-      }
-      await _player.setUrl(detail.audioUrl!);
+      final detail = await _repository.getItemResponse(item.responseId);
+      if (!mounted) return;
+      setState(() => _details[item.responseId] = detail);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _expandedId = null);
+    }
+  }
+
+  Future<void> _togglePlay(String key, String? audioUrl) async {
+    if (_playingKey == key) {
+      await _player.pause();
+      setState(() => _playingKey = null);
+      return;
+    }
+    if (audioUrl == null) return;
+    setState(() => _playingKey = key);
+    try {
+      await _player.setUrl(audioUrl);
       await _player.play();
       if (mounted) setState(() {});
     } catch (_) {
       if (!mounted) return;
-      setState(() => _playingId = null);
+      setState(() => _playingKey = null);
     }
   }
 
@@ -144,9 +155,11 @@ class _AttemptRecordingsScreenState extends State<AttemptRecordingsScreen> {
                           index: i + 1,
                           item: item,
                           detail: _details[item.responseId],
-                          playing: _playingId == item.responseId,
+                          expanded: _expandedId == item.responseId,
+                          playingKey: _playingKey,
                           player: _player,
-                          onPlay: () => _togglePlay(item),
+                          onExpand: () => _toggleExpand(item),
+                          onPlay: _togglePlay,
                         );
                       },
                     ),
@@ -159,17 +172,21 @@ class _ItemCard extends StatelessWidget {
     required this.index,
     required this.item,
     required this.detail,
-    required this.playing,
+    required this.expanded,
+    required this.playingKey,
     required this.player,
+    required this.onExpand,
     required this.onPlay,
   });
 
   final int index;
   final ExamResponseItem item;
   final ExamItemResponse? detail;
-  final bool playing;
+  final bool expanded;
+  final String? playingKey;
   final AudioPlayer player;
-  final VoidCallback onPlay;
+  final VoidCallback onExpand;
+  final void Function(String key, String? audioUrl) onPlay;
 
   @override
   Widget build(BuildContext context) {
@@ -181,118 +198,199 @@ class _ItemCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: onPlay,
-                  child: Container(
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: onExpand,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Container(
                     width: 46,
                     height: 46,
                     decoration: BoxDecoration(
-                      color: playing ? AppColors.indigo : AppColors.chipBlueBg,
+                      color: AppColors.chipBlueBg,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      playing ? Icons.pause : Icons.play_arrow,
-                      color: playing ? Colors.white : AppColors.indigo,
-                      size: 26,
-                    ),
+                    child: const Icon(Icons.mic,
+                        color: AppColors.indigo, size: 22),
                   ),
-                ),
-                const SizedBox(width: 13),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Item $index',
-                        style: const TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.dark,
-                        ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Text(
+                      'Item $index',
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.dark,
                       ),
-                      if (detail?.durationSeconds != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          _formatDuration(detail!.durationSeconds),
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.muted),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (item.itemScore != null)
-                  Text(
-                    item.itemScore!.toStringAsFixed(1),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.dark,
                     ),
                   ),
-              ],
+                  if (item.itemScore != null)
+                    Text(
+                      item.itemScore!.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.dark,
+                      ),
+                    ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    color: AppColors.textGhost,
+                  ),
+                ],
+              ),
             ),
           ),
-          if (playing) ...[
+          if (expanded) ...[
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              child: StreamBuilder<Duration>(
-                stream: player.positionStream,
-                builder: (context, snapshot) {
-                  final position = snapshot.data ?? Duration.zero;
-                  final total = player.duration ??
-                      Duration(seconds: detail?.durationSeconds ?? 0);
-                  final progress = total.inMilliseconds == 0
-                      ? 0.0
-                      : (position.inMilliseconds / total.inMilliseconds)
-                          .clamp(0.0, 1.0);
-                  return Row(
-                    children: [
-                      Text(_formatDuration(position.inSeconds),
-                          style: const TextStyle(
-                              fontSize: 11, color: AppColors.muted)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(99),
-                          child: Container(
-                            height: 4,
-                            color: const Color(0xFFE2E8F0),
-                            child: FractionallySizedBox(
-                              alignment: Alignment.centerLeft,
-                              widthFactor: progress,
-                              child: Container(color: AppColors.indigo),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(_formatDuration(total.inSeconds),
-                          style: const TextStyle(
-                              fontSize: 11, color: AppColors.muted)),
-                    ],
-                  );
-                },
+            if (detail == null)
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              )
+            else if (detail!.turns.isNotEmpty)
+              for (final turn in detail!.turns)
+                _TurnRow(
+                  turn: turn,
+                  playing: playingKey == turn.id,
+                  player: player,
+                  onPlay: () => onPlay(turn.id, turn.audioUrl),
+                )
+            else
+              _TurnRow(
+                turn: ExamItemResponseTurn(
+                  id: detail!.id,
+                  turnOrder: 1,
+                  audioUrl: detail!.audioUrl,
+                  transcript: detail!.transcript,
+                  durationSeconds: detail!.durationSeconds,
+                ),
+                playing: playingKey == detail!.id,
+                player: player,
+                onPlay: () => onPlay(detail!.id, detail!.audioUrl),
               ),
-            ),
-          ],
-          if (detail?.transcript != null && detail!.transcript!.isNotEmpty) ...[
-            const Divider(height: 1, color: Color(0xFFF1F5F9)),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-              child: Text(
-                detail!.transcript!,
-                style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
-              ),
-            ),
           ],
         ],
       ),
+    );
+  }
+}
+
+class _TurnRow extends StatelessWidget {
+  const _TurnRow({
+    required this.turn,
+    required this.playing,
+    required this.player,
+    required this.onPlay,
+  });
+
+  final ExamItemResponseTurn turn;
+  final bool playing;
+  final AudioPlayer player;
+  final VoidCallback onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: turn.audioUrl == null ? null : onPlay,
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: playing ? AppColors.indigo : AppColors.chipBlueBg,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    playing ? Icons.pause : Icons.play_arrow,
+                    color: playing ? Colors.white : AppColors.indigo,
+                    size: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (turn.promptText != null &&
+                        turn.promptText!.isNotEmpty) ...[
+                      Text(
+                        turn.promptText!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    if (turn.durationSeconds != null)
+                      Text(
+                        _formatDuration(turn.durationSeconds),
+                        style: const TextStyle(
+                            fontSize: 11.5, color: AppColors.textGhost),
+                      ),
+                    if (playing) ...[
+                      const SizedBox(height: 8),
+                      StreamBuilder<Duration>(
+                        stream: player.positionStream,
+                        builder: (context, snapshot) {
+                          final position = snapshot.data ?? Duration.zero;
+                          final total = player.duration ??
+                              Duration(seconds: turn.durationSeconds ?? 0);
+                          final progress = total.inMilliseconds == 0
+                              ? 0.0
+                              : (position.inMilliseconds /
+                                      total.inMilliseconds)
+                                  .clamp(0.0, 1.0);
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(99),
+                            child: Container(
+                              height: 4,
+                              color: const Color(0xFFE2E8F0),
+                              child: FractionallySizedBox(
+                                alignment: Alignment.centerLeft,
+                                widthFactor: progress,
+                                child: Container(color: AppColors.indigo),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                    if (turn.transcript != null &&
+                        turn.transcript!.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        turn.transcript!,
+                        style: const TextStyle(
+                            fontSize: 12.5, color: AppColors.muted),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1, color: Color(0xFFF1F5F9)),
+      ],
     );
   }
 
