@@ -18,11 +18,23 @@ class AuthRepository {
   final SecureStorage _secureStorage;
 
   Future<LoginResponse> login({
-    required String login, 
-    required String password, 
+    required String login,
+    required String password,
     required DeviceInfo device
   }) async {
     final result = await _authApi.login(login: login, password: password, device: device);
+    return _onLoginSuccess(result, device);
+  }
+
+  Future<LoginResponse> loginWithGoogle({
+    required String idToken,
+    required DeviceInfo device,
+  }) async {
+    final result = await _authApi.loginWithGoogle(idToken: idToken, device: device);
+    return _onLoginSuccess(result, device);
+  }
+
+  Future<LoginResponse> _onLoginSuccess(LoginResponse result, DeviceInfo device) async {
     await _secureStorage.saveAccessToken(result.accessToken);
     await _secureStorage.saveRefreshToken(result.refreshToken);
     await _secureStorage.saveDeviceId(device.deviceId);

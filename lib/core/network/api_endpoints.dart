@@ -6,6 +6,7 @@ class ApiEndpoints {
   static String get graphqlBaseUrl => baseUrl.replaceFirst(RegExp(r'/api/?$'), '');
 
   static const String login = "/v1/auth/login";
+  static const String googleLogin = "/oauth2/google/token";
   static const String logout = "/v1/auth/logout";
   static const String pushToken = "/v1/devices/push-token";
   static const String examAppeals = "/v1/exam-appeals";

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
@@ -22,7 +24,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool rememberMe = true;
   bool obscurePassword = true;
   bool isLoggingIn = false;
+  bool isGoogleLoggingIn = false;
 
+  final _googleSignIn = GoogleSignIn.instance;
 
   final _authRepository = AuthRepository(
     authApi: AuthApi(ApiClient()),
@@ -60,10 +64,48 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _googleSignIn.initialize(serverClientId: dotenv.get('GOOGLE_SERVER_CLIENT_ID'));
+  }
+
+  @override
   void dispose() {
     _loginController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loginWithGoogle() async {
+    if (isGoogleLoggingIn) return;
+    final deviceInfo = await DeviceInfoService().getDeviceInfo();
+    if (deviceInfo == null) return;
+
+    setState(() => isGoogleLoggingIn = true);
+    try {
+      final account = await _googleSignIn.authenticate();
+      final idToken = account.authentication.idToken;
+      if (idToken == null) throw StateError('No Google ID token returned');
+
+      await _authRepository.loginWithGoogle(idToken: idToken, device: deviceInfo);
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, AppRouter.shell);
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return;
+      debugPrint('Google sign-in failed: ${e.code} ${e.description}');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đăng nhập Google thất bại.')),
+      );
+    } catch (e) {
+      debugPrint('Google sign-in failed: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đăng nhập Google thất bại.')),
+      );
+    } finally {
+      if (mounted) setState(() => isGoogleLoggingIn = false);
+    }
   }
 
   @override
@@ -320,16 +362,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildGoogleButton() {
     return OutlinedButton(
-      onPressed: () {},
+      onPressed: isGoogleLoggingIn ? null : _loginWithGoogle,
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(54),
         side: const BorderSide(color: Color(0xFFE6E6E6), width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      child: const Text(
-        'Đăng nhập bằng Google',
-        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF333333)),
-      ),
+      child: isGoogleLoggingIn
+          ? const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2.4, color: Color(0xFF333333)),
+            )
+          : const Text(
+              'Đăng nhập bằng Google',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF333333)),
+            ),
     );
   }
 

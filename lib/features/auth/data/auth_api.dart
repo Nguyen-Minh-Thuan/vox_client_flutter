@@ -22,6 +22,19 @@ class AuthApi {
     return LoginResponse.fromJson(data);
   }
 
+  Future<LoginResponse> loginWithGoogle({required String idToken, required DeviceInfo device}) async {
+    final response = await _apiClient.post(ApiEndpoints.googleLogin, data: {
+      'idToken': idToken,
+      'device': {
+        'deviceId': device.deviceId,
+        'deviceName': device.deviceName,
+        'platform': device.platform
+      }
+    });
+    var data = response.data['data'];
+    return LoginResponse.fromJson(data);
+  }
+
   Future<void> logout() async {
     await _apiClient.post(ApiEndpoints.logout);
   }
