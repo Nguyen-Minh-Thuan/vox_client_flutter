@@ -30,10 +30,12 @@ class ResultApi {
     final data = await _client.query('''
       query ExamSessionResult(\$sessionId: ID!) {
         examSessionResult(sessionId: \$sessionId) {
+          id
           scoreVisible
           totalScore
           status
-          sections { title score }
+          sections { sectionId title score }
+          items { paperItemId sectionId itemScore }
         }
       }
     ''', variables: {'sessionId': sessionId});

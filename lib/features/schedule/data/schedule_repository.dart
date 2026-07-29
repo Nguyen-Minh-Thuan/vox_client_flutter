@@ -32,12 +32,15 @@ class ScheduleRepository {
 
     final exams = await teacherApi.getSchoolCentralizedExams(schoolId);
 
+    final schedulesPerExam = await Future.wait(
+      exams.map((exam) => _api.getExamSchedules(exam.id)),
+    );
+
     final items = <TeacherScheduleItem>[];
-    for (final exam in exams) {
-      final schedules = await _api.getExamSchedules(exam.id);
-      for (final schedule in schedules) {
+    for (var i = 0; i < exams.length; i++) {
+      for (final schedule in schedulesPerExam[i]) {
         if (schedule.proctorUserIds.contains(myUserId)) {
-          items.add(TeacherScheduleItem(exam: exam, schedule: schedule));
+          items.add(TeacherScheduleItem(exam: exams[i], schedule: schedule));
         }
       }
     }

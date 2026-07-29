@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../app/widgets.dart';
 import '../../../core/network/graphql_client.dart';
+import '../../appeal/presentation/new_appeal_screen.dart';
 import '../../practice/presentation/attempt_recordings_screen.dart';
 import '../data/models/exam_candidate_result.dart';
+import '../data/models/exam_result_summary.dart';
 import '../data/result_api.dart';
 import '../data/result_repository.dart';
 import 'results_list_screen.dart' show ResultStatusMeta;
@@ -141,6 +143,49 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     const Divider(height: 1, color: Color(0xFFF1F5F9)),
                 ],
               ],
+            ),
+          ),
+        ],
+        if (result.status == ExamResultStatus.released) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => NewAppealScreen(
+                  candidateResultId: result.id,
+                  examName: widget.examName,
+                  parts: [
+                    for (final item in result.items)
+                      AppealablePart(
+                        paperItemId: item.paperItemId,
+                        label: result.sections
+                            .firstWhere(
+                              (s) => s.sectionId == item.sectionId,
+                              orElse: () => const ExamCandidateResultSection(
+                                sectionId: '',
+                                title: null,
+                                score: 0,
+                              ),
+                            )
+                            .title ??
+                            'Part',
+                        score: item.itemScore,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            icon: const Icon(Icons.flag_outlined, size: 18),
+            label: const Text('Appeal this result'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.danger,
+              side: const BorderSide(color: Color(0xFFE2E8F0)),
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(99),
+              ),
+              textStyle:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
         ],

@@ -92,6 +92,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   int _selectedDay = 0;
   List<_ScheduleEntry> _entries = const [];
+  Map<DateTime, List<_ScheduleEntry>> _entriesByDay = const {};
   bool _loading = true;
   String? _error;
 
@@ -122,8 +123,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         final exams = await _repository.getExams();
         entries.addAll(exams.map(_ScheduleEntry.fromExamSchedule));
       }
+      final byDay = <DateTime, List<_ScheduleEntry>>{};
+      for (final e in entries) {
+        if (e.startAt == null) continue;
+        final day = DateTime(e.startAt!.year, e.startAt!.month, e.startAt!.day);
+        (byDay[day] ??= []).add(e);
+      }
+      for (final list in byDay.values) {
+        list.sort((a, b) => a.startAt!.compareTo(b.startAt!));
+      }
       if (!mounted) return;
-      setState(() => _entries = entries);
+      setState(() {
+        _entries = entries;
+        _entriesByDay = byDay;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
@@ -132,10 +145,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
   }
 
-  List<_ScheduleEntry> _examsOn(DateTime day) => _entries
-      .where((e) => e.startAt != null && _isSameDate(e.startAt!, day))
-      .toList()
-    ..sort((a, b) => a.startAt!.compareTo(b.startAt!));
+  List<_ScheduleEntry> _examsOn(DateTime day) =>
+      _entriesByDay[DateTime(day.year, day.month, day.day)] ?? const [];
 
   void _openMonth() {
     showModalBottomSheet(
