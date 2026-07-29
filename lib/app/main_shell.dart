@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/network/graphql_client.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/personalize/presentation/practice_tab.dart';
 import '../features/profile/data/profile_api.dart';
 import '../features/schedule/presentation/schedule_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
@@ -48,8 +49,11 @@ class _MainShellState extends State<MainShell> {
     }
 
     final l10n = AppLocalizations.of(context)!;
+
+    // Personalized practice is a student feature — teachers keep three tabs.
     final screens = [
-      _isTeacher ? const TeacherExamListScreen() : const HomeScreen(),
+      if (_isTeacher) const TeacherExamListScreen() else const HomeScreen(),
+      if (!_isTeacher) const PracticeTab(),
       const ScheduleScreen(),
       const ProfileScreen(),
     ];
@@ -72,6 +76,12 @@ class _MainShellState extends State<MainShell> {
             selectedIcon: const Icon(Icons.home),
             label: l10n.navHome,
           ),
+          if (!_isTeacher)
+            NavigationDestination(
+              icon: const Icon(Icons.mic_none),
+              selectedIcon: const Icon(Icons.mic),
+              label: l10n.navPractice,
+            ),
           NavigationDestination(
             icon: const Icon(Icons.calendar_today_outlined),
             selectedIcon: const Icon(Icons.calendar_today),

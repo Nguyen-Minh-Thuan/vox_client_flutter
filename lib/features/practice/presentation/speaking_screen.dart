@@ -1,8 +1,7 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../app/widgets.dart';
 import '../../result/presentation/results_screen.dart';
 
 /// Live speaking-exam screen — the "while speaking" state.
@@ -55,7 +54,7 @@ class _SpeakingScreenState extends State<SpeakingScreen>
               // ── Top bar: exit · progress · timer ──
               Row(
                 children: [
-                  _GhostIconButton(
+                  GhostIconButton(
                     icon: Icons.close,
                     onTap: () => Navigator.of(context).maybePop(),
                   ),
@@ -69,7 +68,7 @@ class _SpeakingScreenState extends State<SpeakingScreen>
                     ),
                   ),
                   const Spacer(),
-                  _Timer(seconds: _remaining),
+                  SessionTimer(seconds: _remaining),
                 ],
               ),
               const SizedBox(height: 14),
@@ -131,7 +130,7 @@ class _SpeakingScreenState extends State<SpeakingScreen>
                           ),
                         ),
                         const Spacer(),
-                        _AudioPlayingBadge(controller: _wave),
+                        AudioBarsBadge(controller: _wave),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -182,9 +181,9 @@ class _SpeakingScreenState extends State<SpeakingScreen>
                 height: 64,
                 child: AnimatedBuilder(
                   animation: _wave,
-                  builder: (_, __) => CustomPaint(
+                  builder: (_, _) => CustomPaint(
                     size: const Size(double.infinity, 64),
-                    painter: _WaveformPainter(_wave.value),
+                    painter: WaveformPainter(_wave.value),
                   ),
                 ),
               ),
@@ -240,7 +239,7 @@ class _SpeakingScreenState extends State<SpeakingScreen>
                   const SizedBox(width: 12),
                   Expanded(
                     flex: 2,
-                    child: _GradientButton(
+                    child: GradientButton(
                       label: _question < _total ? 'Next question' : 'Submit exam',
                       icon: Icons.arrow_forward,
                       onTap: () {
@@ -265,164 +264,3 @@ class _SpeakingScreenState extends State<SpeakingScreen>
   }
 }
 
-class _Timer extends StatelessWidget {
-  const _Timer({required this.seconds});
-  final int seconds;
-
-  @override
-  Widget build(BuildContext context) {
-    final low = seconds <= 15;
-    final m = (seconds ~/ 60).toString().padLeft(2, '0');
-    final s = (seconds % 60).toString().padLeft(2, '0');
-    final color = low ? AppColors.warning : Colors.white;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: (low ? AppColors.warning : Colors.white).withOpacity(0.12),
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.timer_outlined, size: 15, color: color),
-          const SizedBox(width: 6),
-          Text(
-            '$m:$s',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: color,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AudioPlayingBadge extends StatelessWidget {
-  const _AudioPlayingBadge({required this.controller});
-  final AnimationController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, __) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(4, (i) {
-            final phase = (controller.value + i / 4) % 1;
-            final h = 6 + 12 * (0.5 + 0.5 * math.sin(phase * 2 * math.pi)).abs();
-            return Container(
-              width: 3,
-              height: h,
-              margin: const EdgeInsets.symmetric(horizontal: 1.5),
-              decoration: BoxDecoration(
-                color: AppColors.secondary,
-                borderRadius: BorderRadius.circular(99),
-              ),
-            );
-          }),
-        );
-      },
-    );
-  }
-}
-
-class _WaveformPainter extends CustomPainter {
-  _WaveformPainter(this.t);
-  final double t;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const bars = 40;
-    final gap = size.width / bars;
-    final mid = size.height / 2;
-    final paint = Paint()..strokeCap = StrokeCap.round..strokeWidth = 3;
-    final rnd = math.Random(7);
-    for (int i = 0; i < bars; i++) {
-      final base = rnd.nextDouble();
-      final wobble = 0.5 + 0.5 * math.sin((i * 0.5) + t * 2 * math.pi);
-      final amp = (size.height / 2 - 4) * (0.18 + 0.82 * base * wobble);
-      final x = gap * i + gap / 2;
-      paint.color = Color.lerp(
-        AppColors.indigo,
-        AppColors.secondary,
-        i / bars,
-      )!;
-      canvas.drawLine(Offset(x, mid - amp), Offset(x, mid + amp), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_WaveformPainter old) => old.t != t;
-}
-
-class _GhostIconButton extends StatelessWidget {
-  const _GhostIconButton({required this.icon, this.onTap});
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(99),
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withOpacity(0.08),
-        ),
-        child: Icon(icon, size: 20, color: Colors.white),
-      ),
-    );
-  }
-}
-
-class _GradientButton extends StatelessWidget {
-  const _GradientButton({required this.label, required this.icon, this.onTap});
-  final String label;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(99),
-        child: Ink(
-          height: 54,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.indigo, AppColors.secondary],
-            ),
-            borderRadius: BorderRadius.circular(99),
-          ),
-          child: Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(icon, size: 18, color: Colors.white),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

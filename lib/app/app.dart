@@ -39,7 +39,7 @@ class _AppState extends State<App> {
       title: 'VOX Client',
       debugShowCheckedModeBanner: false,
       navigatorKey: AppRouter.navigatorKey,
-      theme: AppTheme.lightTheme,
+      theme: buildTheme(),
       onGenerateRoute: AppRouter.onGenerateRoute,
       initialRoute: AppRouter.login,
       locale: _locale,

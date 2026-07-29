@@ -727,6 +727,672 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search questions'**
   String get questionPickerSearchHint;
+
+  /// No description provided for @navPractice.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice'**
+  String get navPractice;
+
+  /// No description provided for @pzRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get pzRetry;
+
+  /// No description provided for @pzLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load personalized practice.'**
+  String get pzLoadError;
+
+  /// No description provided for @pzSeeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get pzSeeAll;
+
+  /// No description provided for @pzMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String pzMinutes(int count);
+
+  /// No description provided for @pzLevelBeginner.
+  ///
+  /// In en, this message translates to:
+  /// **'Beginner'**
+  String get pzLevelBeginner;
+
+  /// No description provided for @pzLevelIntermediate.
+  ///
+  /// In en, this message translates to:
+  /// **'Intermediate'**
+  String get pzLevelIntermediate;
+
+  /// No description provided for @pzLevelAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get pzLevelAdvanced;
+
+  /// No description provided for @pzHomeSessionToday.
+  ///
+  /// In en, this message translates to:
+  /// **'TODAY\'S SESSION'**
+  String get pzHomeSessionToday;
+
+  /// No description provided for @pzHomePersonalizedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'PERSONALIZED'**
+  String get pzHomePersonalizedBadge;
+
+  /// No description provided for @pzHomeSessionMeta.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min · 1-on-1 conversation · focus:'**
+  String pzHomeSessionMeta(int minutes);
+
+  /// No description provided for @pzHomeStartSpeaking.
+  ///
+  /// In en, this message translates to:
+  /// **'Start speaking'**
+  String get pzHomeStartSpeaking;
+
+  /// No description provided for @pzHomeChangeTopic.
+  ///
+  /// In en, this message translates to:
+  /// **'Change topic'**
+  String get pzHomeChangeTopic;
+
+  /// No description provided for @pzHomeStatSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions done'**
+  String get pzHomeStatSessions;
+
+  /// No description provided for @pzHomeStatAverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Average score'**
+  String get pzHomeStatAverage;
+
+  /// No description provided for @pzHomeStatWeeklyGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly goal'**
+  String get pzHomeStatWeeklyGoal;
+
+  /// No description provided for @pzHomeWeeklyFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'This week\'s focus'**
+  String get pzHomeWeeklyFocus;
+
+  /// No description provided for @pzHomeViewProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View profile'**
+  String get pzHomeViewProfile;
+
+  /// No description provided for @pzHomeSuggestions.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested for you'**
+  String get pzHomeSuggestions;
+
+  /// No description provided for @pzTopicsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaking topics'**
+  String get pzTopicsTitle;
+
+  /// No description provided for @pzTopicsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search topics, skills…'**
+  String get pzTopicsSearchHint;
+
+  /// No description provided for @pzTopicsFilterForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'For you'**
+  String get pzTopicsFilterForYou;
+
+  /// No description provided for @pzTopicsFilterByGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'By goal'**
+  String get pzTopicsFilterByGoal;
+
+  /// No description provided for @pzTopicsFilterByWeakness.
+  ///
+  /// In en, this message translates to:
+  /// **'Weak spots'**
+  String get pzTopicsFilterByWeakness;
+
+  /// No description provided for @pzTopicsFilterSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get pzTopicsFilterSaved;
+
+  /// No description provided for @pzTopicsPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'PRIORITY #1'**
+  String get pzTopicsPriority;
+
+  /// No description provided for @pzTopicsMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% match'**
+  String pzTopicsMatch(int percent);
+
+  /// No description provided for @pzTopicsSpeakThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Speak this topic'**
+  String get pzTopicsSpeakThis;
+
+  /// No description provided for @pzTopicsOtherSuggestions.
+  ///
+  /// In en, this message translates to:
+  /// **'Other suggestions'**
+  String get pzTopicsOtherSuggestions;
+
+  /// No description provided for @pzTopicsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No topics in this list yet.'**
+  String get pzTopicsEmpty;
+
+  /// No description provided for @pzTopicsFooterTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This list updates after every session — based on the topics you get excited about and the mistakes that keep coming back.'**
+  String get pzTopicsFooterTip;
+
+  /// No description provided for @pzTopicsWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'Why?'**
+  String get pzTopicsWhy;
+
+  /// No description provided for @pzSessionLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaking · {time}'**
+  String pzSessionLive(String time);
+
+  /// No description provided for @pzSessionCorrectNow.
+  ///
+  /// In en, this message translates to:
+  /// **'FIX NOW · {count} POINTS'**
+  String pzSessionCorrectNow(int count);
+
+  /// No description provided for @pzSessionKnownWeakness.
+  ///
+  /// In en, this message translates to:
+  /// **'Known weak spot · time #{count}'**
+  String pzSessionKnownWeakness(int count);
+
+  /// No description provided for @pzSessionHearCorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'Hear it right'**
+  String get pzSessionHearCorrect;
+
+  /// No description provided for @pzSessionSayAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Say it again'**
+  String get pzSessionSayAgain;
+
+  /// No description provided for @pzSessionRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording your answer…'**
+  String get pzSessionRecording;
+
+  /// No description provided for @pzSessionTapToSpeak.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the mic to answer'**
+  String get pzSessionTapToSpeak;
+
+  /// No description provided for @pzSessionThinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening…'**
+  String get pzSessionThinking;
+
+  /// No description provided for @pzSessionFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish session'**
+  String get pzSessionFinish;
+
+  /// No description provided for @pzSessionMicDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone permission is needed to record your answer.'**
+  String get pzSessionMicDenied;
+
+  /// No description provided for @pzSessionRecordError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start recording. Please try again.'**
+  String get pzSessionRecordError;
+
+  /// No description provided for @pzSessionExitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave this session?'**
+  String get pzSessionExitTitle;
+
+  /// No description provided for @pzSessionExitBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your progress in this session will not be saved.'**
+  String get pzSessionExitBody;
+
+  /// No description provided for @pzSessionExitStay.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep speaking'**
+  String get pzSessionExitStay;
+
+  /// No description provided for @pzSessionExitLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get pzSessionExitLeave;
+
+  /// No description provided for @pzSessionPlaybackUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No recording available yet.'**
+  String get pzSessionPlaybackUnavailable;
+
+  /// No description provided for @pzSessionNoSampleAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'No model audio for this sentence yet.'**
+  String get pzSessionNoSampleAudio;
+
+  /// No description provided for @pzSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session summary'**
+  String get pzSummaryTitle;
+
+  /// No description provided for @pzSummaryHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'{topic} · {minutes} MIN'**
+  String pzSummaryHeader(String topic, int minutes);
+
+  /// No description provided for @pzSummaryDelta.
+  ///
+  /// In en, this message translates to:
+  /// **'{delta} vs last session'**
+  String pzSummaryDelta(String delta);
+
+  /// No description provided for @pzSummaryRubric.
+  ///
+  /// In en, this message translates to:
+  /// **'Rubric · 5 criteria'**
+  String get pzSummaryRubric;
+
+  /// No description provided for @pzSummaryRubricLegend.
+  ///
+  /// In en, this message translates to:
+  /// **'weight · score /10'**
+  String get pzSummaryRubricLegend;
+
+  /// No description provided for @pzSummaryRepeatedErrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeated mistakes this session'**
+  String get pzSummaryRepeatedErrors;
+
+  /// No description provided for @pzSummaryDrill.
+  ///
+  /// In en, this message translates to:
+  /// **'Drill these {count} mistakes · {minutes} min'**
+  String pzSummaryDrill(int count, int minutes);
+
+  /// No description provided for @pzSummaryReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay my recording'**
+  String get pzSummaryReplay;
+
+  /// No description provided for @pzWeaknessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Weak-spot profile'**
+  String get pzWeaknessTitle;
+
+  /// No description provided for @pzWeaknessRange.
+  ///
+  /// In en, this message translates to:
+  /// **'30 days'**
+  String get pzWeaknessRange;
+
+  /// No description provided for @pzWeaknessFromSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Compiled from {count} sessions'**
+  String pzWeaknessFromSessions(int count);
+
+  /// No description provided for @pzWeaknessTracked.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracked'**
+  String get pzWeaknessTracked;
+
+  /// No description provided for @pzWeaknessNearlyFixed.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearly fixed'**
+  String get pzWeaknessNearlyFixed;
+
+  /// No description provided for @pzWeaknessNewlyFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Newly found'**
+  String get pzWeaknessNewlyFound;
+
+  /// No description provided for @pzWeaknessGrammar.
+  ///
+  /// In en, this message translates to:
+  /// **'Grammar'**
+  String get pzWeaknessGrammar;
+
+  /// No description provided for @pzWeaknessPronunciation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pronunciation'**
+  String get pzWeaknessPronunciation;
+
+  /// No description provided for @pzWeaknessExpression.
+  ///
+  /// In en, this message translates to:
+  /// **'Expression'**
+  String get pzWeaknessExpression;
+
+  /// No description provided for @pzWeaknessSevere.
+  ///
+  /// In en, this message translates to:
+  /// **'SEVERE'**
+  String get pzWeaknessSevere;
+
+  /// No description provided for @pzWeaknessNew.
+  ///
+  /// In en, this message translates to:
+  /// **'NEW'**
+  String get pzWeaknessNew;
+
+  /// No description provided for @pzWeaknessImproving.
+  ///
+  /// In en, this message translates to:
+  /// **'IMPROVING'**
+  String get pzWeaknessImproving;
+
+  /// No description provided for @pzWeaknessMild.
+  ///
+  /// In en, this message translates to:
+  /// **'MILD'**
+  String get pzWeaknessMild;
+
+  /// No description provided for @pzWeaknessBuildSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Build a session from the top 3'**
+  String get pzWeaknessBuildSession;
+
+  /// No description provided for @pzInterestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your interests'**
+  String get pzInterestsTitle;
+
+  /// No description provided for @pzInterestsDiscovered.
+  ///
+  /// In en, this message translates to:
+  /// **'I NOTICED SOMETHING'**
+  String get pzInterestsDiscovered;
+
+  /// No description provided for @pzInterestsConfidence.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% confident'**
+  String pzInterestsConfidence(int percent);
+
+  /// No description provided for @pzInterestsAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to interests'**
+  String get pzInterestsAdd;
+
+  /// No description provided for @pzInterestsDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get pzInterestsDismiss;
+
+  /// No description provided for @pzInterestsActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get pzInterestsActive;
+
+  /// No description provided for @pzInterestsEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get pzInterestsEdit;
+
+  /// No description provided for @pzInterestsCooling.
+  ///
+  /// In en, this message translates to:
+  /// **'Cooling down'**
+  String get pzInterestsCooling;
+
+  /// No description provided for @pzInterestsKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it'**
+  String get pzInterestsKeep;
+
+  /// No description provided for @pzInterestsAutoUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update automatically'**
+  String get pzInterestsAutoUpdate;
+
+  /// No description provided for @pzInterestsAutoUpdateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Let me change the suggested topics based on what you actually talk about.'**
+  String get pzInterestsAutoUpdateBody;
+
+  /// No description provided for @pzInterestsFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Every change shows up here before it affects your practice.'**
+  String get pzInterestsFooter;
+
+  /// No description provided for @pzProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get pzProgressTitle;
+
+  /// No description provided for @pzProgressRangeFourWeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'4 weeks'**
+  String get pzProgressRangeFourWeeks;
+
+  /// No description provided for @pzProgressRangeThreeMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'3 months'**
+  String get pzProgressRangeThreeMonths;
+
+  /// No description provided for @pzProgressRangeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All time'**
+  String get pzProgressRangeAll;
+
+  /// No description provided for @pzProgressAverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Average score'**
+  String get pzProgressAverage;
+
+  /// No description provided for @pzProgressRecentSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent sessions'**
+  String get pzProgressRecentSessions;
+
+  /// No description provided for @pzOnboardingIntroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s build your speaking profile'**
+  String get pzOnboardingIntroTitle;
+
+  /// No description provided for @pzOnboardingIntroBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer a few quick questions so every practice session is picked for you — your level, your interests, your weak spots.'**
+  String get pzOnboardingIntroBody;
+
+  /// No description provided for @pzOnboardingIntroStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get pzOnboardingIntroStart;
+
+  /// No description provided for @pzOnboardingIntroDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'About 3 minutes · no right answers'**
+  String get pzOnboardingIntroDuration;
+
+  /// No description provided for @pzOnboardingQuizTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your learning style'**
+  String get pzOnboardingQuizTitle;
+
+  /// No description provided for @pzOnboardingProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{current}/{total}'**
+  String pzOnboardingProgress(int current, int total);
+
+  /// No description provided for @pzOnboardingQuizTip.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no right answers — answer honestly so the plan fits you.'**
+  String get pzOnboardingQuizTip;
+
+  /// No description provided for @pzOnboardingBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get pzOnboardingBack;
+
+  /// No description provided for @pzOnboardingContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get pzOnboardingContinue;
+
+  /// No description provided for @pzOnboardingSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get pzOnboardingSkip;
+
+  /// No description provided for @pzOnboardingInterestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Interests & goals'**
+  String get pzOnboardingInterestsTitle;
+
+  /// No description provided for @pzOnboardingInterestsHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'What do you want to talk about?'**
+  String get pzOnboardingInterestsHeading;
+
+  /// No description provided for @pzOnboardingInterestsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick at least 3 topics. I\'ll use exactly these for your speaking practice — and update them as you start talking about other things.'**
+  String get pzOnboardingInterestsBody;
+
+  /// No description provided for @pzOnboardingMainGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Main goal'**
+  String get pzOnboardingMainGoal;
+
+  /// No description provided for @pzOnboardingContinueWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue · {count} topics picked'**
+  String pzOnboardingContinueWithCount(int count);
+
+  /// No description provided for @pzOnboardingPickThree.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick at least 3 topics'**
+  String get pzOnboardingPickThree;
+
+  /// No description provided for @pzOnboardingProfileHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR LEARNING PROFILE'**
+  String get pzOnboardingProfileHeader;
+
+  /// No description provided for @pzOnboardingCefr.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated CEFR'**
+  String get pzOnboardingCefr;
+
+  /// No description provided for @pzOnboardingFlas.
+  ///
+  /// In en, this message translates to:
+  /// **'Attitude & motivation (FLAS)'**
+  String get pzOnboardingFlas;
+
+  /// No description provided for @pzOnboardingRoadmap.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested 4-week plan'**
+  String get pzOnboardingRoadmap;
+
+  /// No description provided for @pzOnboardingStartFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your first session'**
+  String get pzOnboardingStartFirst;
+
+  /// No description provided for @pzOnboardingRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo speaking onboarding'**
+  String get pzOnboardingRestart;
 }
 
 class _AppLocalizationsDelegate

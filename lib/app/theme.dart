@@ -2,36 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class AppTheme {
-  static ThemeData get lightTheme {
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.blueAccent,
-        brightness: Brightness.light
-      ),
-      scaffoldBackgroundColor: Colors.white,
-      appBarTheme: const AppBarTheme(
-        centerTitle: true,
-        elevation: 0
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        )
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size.fromHeight(48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8)
-          )
-        )
-      )
-    );
-  }
-}
-
 class AppColors {
   static const indigo = Color(0xFF4F46E5);
   static const secondary = Color(0xFF06B6D4);
@@ -84,6 +54,16 @@ ThemeData buildTheme() {
 
   return base.copyWith(
     textTheme: GoogleFonts.beVietnamProTextTheme(base.textTheme),
+    appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
+    inputDecorationTheme: InputDecorationTheme(
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        minimumSize: const Size.fromHeight(48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    ),
     navigationBarTheme: NavigationBarThemeData(
       height: 72,
       backgroundColor: Colors.white,

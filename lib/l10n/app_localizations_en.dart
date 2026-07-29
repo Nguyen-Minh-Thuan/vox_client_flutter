@@ -337,4 +337,372 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get questionPickerSearchHint => 'Search questions';
+
+  @override
+  String get navPractice => 'Practice';
+
+  @override
+  String get pzRetry => 'Retry';
+
+  @override
+  String get pzLoadError => 'Could not load personalized practice.';
+
+  @override
+  String get pzSeeAll => 'See all';
+
+  @override
+  String pzMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get pzLevelBeginner => 'Beginner';
+
+  @override
+  String get pzLevelIntermediate => 'Intermediate';
+
+  @override
+  String get pzLevelAdvanced => 'Advanced';
+
+  @override
+  String get pzHomeSessionToday => 'TODAY\'S SESSION';
+
+  @override
+  String get pzHomePersonalizedBadge => 'PERSONALIZED';
+
+  @override
+  String pzHomeSessionMeta(int minutes) {
+    return '$minutes min · 1-on-1 conversation · focus:';
+  }
+
+  @override
+  String get pzHomeStartSpeaking => 'Start speaking';
+
+  @override
+  String get pzHomeChangeTopic => 'Change topic';
+
+  @override
+  String get pzHomeStatSessions => 'Sessions done';
+
+  @override
+  String get pzHomeStatAverage => 'Average score';
+
+  @override
+  String get pzHomeStatWeeklyGoal => 'Weekly goal';
+
+  @override
+  String get pzHomeWeeklyFocus => 'This week\'s focus';
+
+  @override
+  String get pzHomeViewProfile => 'View profile';
+
+  @override
+  String get pzHomeSuggestions => 'Suggested for you';
+
+  @override
+  String get pzTopicsTitle => 'Speaking topics';
+
+  @override
+  String get pzTopicsSearchHint => 'Search topics, skills…';
+
+  @override
+  String get pzTopicsFilterForYou => 'For you';
+
+  @override
+  String get pzTopicsFilterByGoal => 'By goal';
+
+  @override
+  String get pzTopicsFilterByWeakness => 'Weak spots';
+
+  @override
+  String get pzTopicsFilterSaved => 'Saved';
+
+  @override
+  String get pzTopicsPriority => 'PRIORITY #1';
+
+  @override
+  String pzTopicsMatch(int percent) {
+    return '$percent% match';
+  }
+
+  @override
+  String get pzTopicsSpeakThis => 'Speak this topic';
+
+  @override
+  String get pzTopicsOtherSuggestions => 'Other suggestions';
+
+  @override
+  String get pzTopicsEmpty => 'No topics in this list yet.';
+
+  @override
+  String get pzTopicsFooterTip =>
+      'This list updates after every session — based on the topics you get excited about and the mistakes that keep coming back.';
+
+  @override
+  String get pzTopicsWhy => 'Why?';
+
+  @override
+  String pzSessionLive(String time) {
+    return 'Speaking · $time';
+  }
+
+  @override
+  String pzSessionCorrectNow(int count) {
+    return 'FIX NOW · $count POINTS';
+  }
+
+  @override
+  String pzSessionKnownWeakness(int count) {
+    return 'Known weak spot · time #$count';
+  }
+
+  @override
+  String get pzSessionHearCorrect => 'Hear it right';
+
+  @override
+  String get pzSessionSayAgain => 'Say it again';
+
+  @override
+  String get pzSessionRecording => 'Recording your answer…';
+
+  @override
+  String get pzSessionTapToSpeak => 'Tap the mic to answer';
+
+  @override
+  String get pzSessionThinking => 'Listening…';
+
+  @override
+  String get pzSessionFinish => 'Finish session';
+
+  @override
+  String get pzSessionMicDenied =>
+      'Microphone permission is needed to record your answer.';
+
+  @override
+  String get pzSessionRecordError =>
+      'Could not start recording. Please try again.';
+
+  @override
+  String get pzSessionExitTitle => 'Leave this session?';
+
+  @override
+  String get pzSessionExitBody =>
+      'Your progress in this session will not be saved.';
+
+  @override
+  String get pzSessionExitStay => 'Keep speaking';
+
+  @override
+  String get pzSessionExitLeave => 'Leave';
+
+  @override
+  String get pzSessionPlaybackUnavailable => 'No recording available yet.';
+
+  @override
+  String get pzSessionNoSampleAudio => 'No model audio for this sentence yet.';
+
+  @override
+  String get pzSummaryTitle => 'Session summary';
+
+  @override
+  String pzSummaryHeader(String topic, int minutes) {
+    return '$topic · $minutes MIN';
+  }
+
+  @override
+  String pzSummaryDelta(String delta) {
+    return '$delta vs last session';
+  }
+
+  @override
+  String get pzSummaryRubric => 'Rubric · 5 criteria';
+
+  @override
+  String get pzSummaryRubricLegend => 'weight · score /10';
+
+  @override
+  String get pzSummaryRepeatedErrors => 'Repeated mistakes this session';
+
+  @override
+  String pzSummaryDrill(int count, int minutes) {
+    return 'Drill these $count mistakes · $minutes min';
+  }
+
+  @override
+  String get pzSummaryReplay => 'Replay my recording';
+
+  @override
+  String get pzWeaknessTitle => 'Weak-spot profile';
+
+  @override
+  String get pzWeaknessRange => '30 days';
+
+  @override
+  String pzWeaknessFromSessions(int count) {
+    return 'Compiled from $count sessions';
+  }
+
+  @override
+  String get pzWeaknessTracked => 'Tracked';
+
+  @override
+  String get pzWeaknessNearlyFixed => 'Nearly fixed';
+
+  @override
+  String get pzWeaknessNewlyFound => 'Newly found';
+
+  @override
+  String get pzWeaknessGrammar => 'Grammar';
+
+  @override
+  String get pzWeaknessPronunciation => 'Pronunciation';
+
+  @override
+  String get pzWeaknessExpression => 'Expression';
+
+  @override
+  String get pzWeaknessSevere => 'SEVERE';
+
+  @override
+  String get pzWeaknessNew => 'NEW';
+
+  @override
+  String get pzWeaknessImproving => 'IMPROVING';
+
+  @override
+  String get pzWeaknessMild => 'MILD';
+
+  @override
+  String get pzWeaknessBuildSession => 'Build a session from the top 3';
+
+  @override
+  String get pzInterestsTitle => 'Your interests';
+
+  @override
+  String get pzInterestsDiscovered => 'I NOTICED SOMETHING';
+
+  @override
+  String pzInterestsConfidence(int percent) {
+    return '$percent% confident';
+  }
+
+  @override
+  String get pzInterestsAdd => 'Add to interests';
+
+  @override
+  String get pzInterestsDismiss => 'Not now';
+
+  @override
+  String get pzInterestsActive => 'Active';
+
+  @override
+  String get pzInterestsEdit => 'Edit';
+
+  @override
+  String get pzInterestsCooling => 'Cooling down';
+
+  @override
+  String get pzInterestsKeep => 'Keep it';
+
+  @override
+  String get pzInterestsAutoUpdate => 'Update automatically';
+
+  @override
+  String get pzInterestsAutoUpdateBody =>
+      'Let me change the suggested topics based on what you actually talk about.';
+
+  @override
+  String get pzInterestsFooter =>
+      'Every change shows up here before it affects your practice.';
+
+  @override
+  String get pzProgressTitle => 'Progress';
+
+  @override
+  String get pzProgressRangeFourWeeks => '4 weeks';
+
+  @override
+  String get pzProgressRangeThreeMonths => '3 months';
+
+  @override
+  String get pzProgressRangeAll => 'All time';
+
+  @override
+  String get pzProgressAverage => 'Average score';
+
+  @override
+  String get pzProgressRecentSessions => 'Recent sessions';
+
+  @override
+  String get pzOnboardingIntroTitle => 'Let\'s build your speaking profile';
+
+  @override
+  String get pzOnboardingIntroBody =>
+      'Answer a few quick questions so every practice session is picked for you — your level, your interests, your weak spots.';
+
+  @override
+  String get pzOnboardingIntroStart => 'Get started';
+
+  @override
+  String get pzOnboardingIntroDuration => 'About 3 minutes · no right answers';
+
+  @override
+  String get pzOnboardingQuizTitle => 'Your learning style';
+
+  @override
+  String pzOnboardingProgress(int current, int total) {
+    return '$current/$total';
+  }
+
+  @override
+  String get pzOnboardingQuizTip =>
+      'There are no right answers — answer honestly so the plan fits you.';
+
+  @override
+  String get pzOnboardingBack => 'Back';
+
+  @override
+  String get pzOnboardingContinue => 'Continue';
+
+  @override
+  String get pzOnboardingSkip => 'Skip';
+
+  @override
+  String get pzOnboardingInterestsTitle => 'Interests & goals';
+
+  @override
+  String get pzOnboardingInterestsHeading => 'What do you want to talk about?';
+
+  @override
+  String get pzOnboardingInterestsBody =>
+      'Pick at least 3 topics. I\'ll use exactly these for your speaking practice — and update them as you start talking about other things.';
+
+  @override
+  String get pzOnboardingMainGoal => 'Main goal';
+
+  @override
+  String pzOnboardingContinueWithCount(int count) {
+    return 'Continue · $count topics picked';
+  }
+
+  @override
+  String get pzOnboardingPickThree => 'Pick at least 3 topics';
+
+  @override
+  String get pzOnboardingProfileHeader => 'YOUR LEARNING PROFILE';
+
+  @override
+  String get pzOnboardingCefr => 'Estimated CEFR';
+
+  @override
+  String get pzOnboardingFlas => 'Attitude & motivation (FLAS)';
+
+  @override
+  String get pzOnboardingRoadmap => 'Suggested 4-week plan';
+
+  @override
+  String get pzOnboardingStartFirst => 'Start your first session';
+
+  @override
+  String get pzOnboardingRestart => 'Redo speaking onboarding';
 }

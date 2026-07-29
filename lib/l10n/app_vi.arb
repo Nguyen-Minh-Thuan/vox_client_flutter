@@ -133,5 +133,174 @@
   "@questionPickerDone": {
     "placeholders": { "count": { "type": "int" } }
   },
-  "questionPickerSearchHint": "Tìm kiếm câu hỏi"
+  "questionPickerSearchHint": "Tìm kiếm câu hỏi",
+
+  "navPractice": "Luyện nói",
+
+  "pzRetry": "Thử lại",
+  "pzLoadError": "Không thể tải phần ôn luyện cá nhân hoá.",
+  "pzSeeAll": "Tất cả",
+  "pzMinutes": "{count} phút",
+  "@pzMinutes": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "pzLevelBeginner": "Cơ bản",
+  "pzLevelIntermediate": "Trung cấp",
+  "pzLevelAdvanced": "Nâng cao",
+
+  "pzHomeSessionToday": "PHIÊN HÔM NAY",
+  "pzHomePersonalizedBadge": "CÁ NHÂN HOÁ",
+  "pzHomeSessionMeta": "{minutes} phút · hội thoại 1-1 · trọng tâm:",
+  "@pzHomeSessionMeta": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "pzHomeStartSpeaking": "Bắt đầu nói",
+  "pzHomeChangeTopic": "Đổi chủ đề",
+  "pzHomeStatSessions": "Buổi đã nói",
+  "pzHomeStatAverage": "Điểm TB",
+  "pzHomeStatWeeklyGoal": "Mục tiêu tuần",
+  "pzHomeWeeklyFocus": "Tập trung tuần này",
+  "pzHomeViewProfile": "Xem hồ sơ",
+  "pzHomeSuggestions": "Gợi ý cho bạn",
+
+  "pzTopicsTitle": "Chủ đề luyện nói",
+  "pzTopicsSearchHint": "Tìm chủ đề, kỹ năng…",
+  "pzTopicsFilterForYou": "Cho bạn",
+  "pzTopicsFilterByGoal": "Theo mục tiêu",
+  "pzTopicsFilterByWeakness": "Điểm yếu",
+  "pzTopicsFilterSaved": "Đã lưu",
+  "pzTopicsPriority": "ƯU TIÊN #1",
+  "pzTopicsMatch": "Khớp {percent}%",
+  "@pzTopicsMatch": {
+    "placeholders": { "percent": { "type": "int" } }
+  },
+  "pzTopicsSpeakThis": "Nói chủ đề này",
+  "pzTopicsOtherSuggestions": "Gợi ý khác",
+  "pzTopicsEmpty": "Chưa có chủ đề nào trong danh sách này.",
+  "pzTopicsFooterTip": "Danh sách này tự đổi sau mỗi buổi nói — dựa trên chủ đề bạn hào hứng và lỗi lặp lại.",
+  "pzTopicsWhy": "Vì sao?",
+
+  "pzSessionLive": "Đang nói · {time}",
+  "@pzSessionLive": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "pzSessionCorrectNow": "SỬA NGAY · {count} ĐIỂM",
+  "@pzSessionCorrectNow": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "pzSessionKnownWeakness": "Điểm yếu đã biết · lần thứ {count}",
+  "@pzSessionKnownWeakness": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "pzSessionHearCorrect": "Nghe câu đúng",
+  "pzSessionSayAgain": "Nói lại",
+  "pzSessionRecording": "Đang ghi âm câu trả lời…",
+  "pzSessionTapToSpeak": "Bấm mic để trả lời",
+  "pzSessionThinking": "Đang nghe bạn nói…",
+  "pzSessionFinish": "Kết thúc buổi",
+  "pzSessionMicDenied": "Cần quyền micro để ghi âm câu trả lời của bạn.",
+  "pzSessionRecordError": "Không bắt đầu ghi âm được. Vui lòng thử lại.",
+  "pzSessionExitTitle": "Thoát buổi nói?",
+  "pzSessionExitBody": "Tiến trình của buổi này sẽ không được lưu.",
+  "pzSessionExitStay": "Nói tiếp",
+  "pzSessionExitLeave": "Thoát",
+  "pzSessionPlaybackUnavailable": "Chưa có bản ghi âm nào.",
+  "pzSessionNoSampleAudio": "Chưa có audio mẫu cho câu này.",
+
+  "pzSummaryTitle": "Tổng kết buổi nói",
+  "pzSummaryHeader": "{topic} · {minutes} PHÚT",
+  "@pzSummaryHeader": {
+    "placeholders": {
+      "topic": { "type": "String" },
+      "minutes": { "type": "int" }
+    }
+  },
+  "pzSummaryDelta": "{delta} so với buổi trước",
+  "@pzSummaryDelta": {
+    "placeholders": { "delta": { "type": "String" } }
+  },
+  "pzSummaryRubric": "Rubric · 5 tiêu chí",
+  "pzSummaryRubricLegend": "trọng số · điểm /10",
+  "pzSummaryRepeatedErrors": "Lỗi lặp lại trong buổi",
+  "pzSummaryDrill": "Luyện lại {count} lỗi này · {minutes} phút",
+  "@pzSummaryDrill": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "minutes": { "type": "int" }
+    }
+  },
+  "pzSummaryReplay": "Nghe lại ghi âm",
+
+  "pzWeaknessTitle": "Hồ sơ điểm yếu",
+  "pzWeaknessRange": "30 ngày",
+  "pzWeaknessFromSessions": "Tổng hợp từ {count} buổi nói",
+  "@pzWeaknessFromSessions": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "pzWeaknessTracked": "Điểm yếu đang theo",
+  "pzWeaknessNearlyFixed": "Sắp khắc phục",
+  "pzWeaknessNewlyFound": "Mới phát hiện",
+  "pzWeaknessGrammar": "Ngữ pháp",
+  "pzWeaknessPronunciation": "Phát âm",
+  "pzWeaknessExpression": "Diễn đạt",
+  "pzWeaknessSevere": "NẶNG",
+  "pzWeaknessNew": "MỚI",
+  "pzWeaknessImproving": "ĐANG TỐT LÊN",
+  "pzWeaknessMild": "NHẸ",
+  "pzWeaknessBuildSession": "Tạo buổi luyện từ 3 điểm yếu đầu",
+
+  "pzInterestsTitle": "Sở thích của bạn",
+  "pzInterestsDiscovered": "MÌNH PHÁT HIỆN THÊM",
+  "pzInterestsConfidence": "độ chắc {percent}%",
+  "@pzInterestsConfidence": {
+    "placeholders": { "percent": { "type": "int" } }
+  },
+  "pzInterestsAdd": "Thêm vào sở thích",
+  "pzInterestsDismiss": "Bỏ qua",
+  "pzInterestsActive": "Đang hoạt động",
+  "pzInterestsEdit": "Sửa",
+  "pzInterestsCooling": "Đang nguội dần",
+  "pzInterestsKeep": "Giữ lại",
+  "pzInterestsAutoUpdate": "Tự cập nhật theo hành vi",
+  "pzInterestsAutoUpdateBody": "Cho phép mình đổi chủ đề gợi ý dựa trên điều bạn hay nói.",
+  "pzInterestsFooter": "Mọi thay đổi đều hiển thị ở đây trước khi ảnh hưởng tới bài luyện.",
+
+  "pzProgressTitle": "Tiến độ",
+  "pzProgressRangeFourWeeks": "4 tuần",
+  "pzProgressRangeThreeMonths": "3 tháng",
+  "pzProgressRangeAll": "Tất cả",
+  "pzProgressAverage": "Điểm trung bình",
+  "pzProgressRecentSessions": "Buổi gần đây",
+
+  "pzOnboardingIntroTitle": "Cùng dựng hồ sơ nói của bạn",
+  "pzOnboardingIntroBody": "Trả lời vài câu hỏi nhanh để mỗi buổi luyện đều được chọn riêng cho bạn — đúng trình độ, đúng sở thích, đúng điểm yếu.",
+  "pzOnboardingIntroStart": "Bắt đầu",
+  "pzOnboardingIntroDuration": "Khoảng 3 phút · không có đáp án đúng",
+  "pzOnboardingQuizTitle": "Phong cách học của bạn",
+  "pzOnboardingProgress": "{current}/{total}",
+  "@pzOnboardingProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "pzOnboardingQuizTip": "Không có đáp án đúng — trả lời thật để lộ trình bám đúng bạn.",
+  "pzOnboardingBack": "Quay lại",
+  "pzOnboardingContinue": "Tiếp tục",
+  "pzOnboardingSkip": "Bỏ qua",
+  "pzOnboardingInterestsTitle": "Sở thích & mục tiêu",
+  "pzOnboardingInterestsHeading": "Bạn muốn nói về điều gì?",
+  "pzOnboardingInterestsBody": "Chọn ít nhất 3 chủ đề. Mình sẽ lấy đúng những thứ này làm nội dung luyện nói — và tự cập nhật khi bạn nói nhiều hơn về chủ đề khác.",
+  "pzOnboardingMainGoal": "Mục tiêu chính",
+  "pzOnboardingContinueWithCount": "Tiếp tục · đã chọn {count} chủ đề",
+  "@pzOnboardingContinueWithCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "pzOnboardingPickThree": "Chọn ít nhất 3 chủ đề",
+  "pzOnboardingProfileHeader": "HỒ SƠ HỌC TẬP CỦA BẠN",
+  "pzOnboardingCefr": "CEFR ước lượng",
+  "pzOnboardingFlas": "Thái độ & động lực (FLAS)",
+  "pzOnboardingRoadmap": "Lộ trình 4 tuần đề xuất",
+  "pzOnboardingStartFirst": "Bắt đầu buổi đầu tiên",
+  "pzOnboardingRestart": "Làm lại onboarding luyện nói"
 }

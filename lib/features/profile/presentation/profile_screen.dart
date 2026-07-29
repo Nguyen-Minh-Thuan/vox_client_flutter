@@ -7,6 +7,10 @@ import '../../../app/widgets.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../result/presentation/results_list_screen.dart';
 import '../../appeal/presentation/appeals_screen.dart';
+import '../../personalize/presentation/interests_screen.dart';
+import '../../personalize/presentation/onboarding/onboarding_flow.dart';
+import '../../personalize/presentation/progress_screen.dart';
+import '../../personalize/presentation/weakness_profile_screen.dart';
 import '../../practice/presentation/recordings_screen.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/graphql_client.dart';
@@ -64,6 +68,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Clears the practice-onboarding flag and reruns the questionnaire, so the
+  /// flow stays demonstrable after it has been completed once.
+  Future<void> _restartPracticeOnboarding() async {
+    await PreferenceStorage().savePracticeOnboardingDone(false);
+    if (!mounted) return;
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const OnboardingFlow()),
+    );
   }
 
   String? _roleLabel(AppLocalizations l10n) {
@@ -221,6 +235,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ]),
               const SizedBox(height: 20),
+
+              if (_profile?.roleCode != 'TEACHER') ...[
+                SectionLabel(l10n.navPractice),
+                const SizedBox(height: 10),
+                _MenuGroup(items: [
+                  _MenuItem(
+                    icon: Icons.show_chart,
+                    label: l10n.pzProgressTitle,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const ProgressScreen()),
+                    ),
+                  ),
+                  _MenuItem(
+                    icon: Icons.troubleshoot,
+                    label: l10n.pzWeaknessTitle,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const WeaknessProfileScreen()),
+                    ),
+                  ),
+                  _MenuItem(
+                    icon: Icons.favorite_outline,
+                    label: l10n.pzInterestsTitle,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const InterestsScreen()),
+                    ),
+                  ),
+                  _MenuItem(
+                    icon: Icons.restart_alt,
+                    label: l10n.pzOnboardingRestart,
+                    onTap: _restartPracticeOnboarding,
+                  ),
+                ]),
+                const SizedBox(height: 20),
+              ],
 
               SectionLabel(l10n.sectionSettings),
               const SizedBox(height: 10),
