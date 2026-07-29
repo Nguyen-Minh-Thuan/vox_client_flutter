@@ -12,11 +12,7 @@ class AuthApi {
     final response = await _apiClient.post(ApiEndpoints.login, data: {
       'login': login,
       'password': password,
-      'device': {
-        'deviceId': device.deviceId,
-        'deviceName': device.deviceName,
-        'platform': device.platform
-      }
+      'device': device.toJson()
     });
     var data = response.data['data'];
     return LoginResponse.fromJson(data);
@@ -25,11 +21,7 @@ class AuthApi {
   Future<LoginResponse> loginWithGoogle({required String idToken, required DeviceInfo device}) async {
     final response = await _apiClient.post(ApiEndpoints.googleLogin, data: {
       'idToken': idToken,
-      'device': {
-        'deviceId': device.deviceId,
-        'deviceName': device.deviceName,
-        'platform': device.platform
-      }
+      'device': device.toJson()
     });
     var data = response.data['data'];
     return LoginResponse.fromJson(data);
