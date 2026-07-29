@@ -8,6 +8,7 @@ class ApiEndpoints {
   static const String login = "/v1/auth/login";
   static const String logout = "/v1/auth/logout";
   static const String pushToken = "/v1/devices/push-token";
+  static const String examAppeals = "/v1/exam-appeals";
 
   static const String classTests = "/v1/class-tests";
   static String classTestById(String id) => "/v1/class-tests/$id";

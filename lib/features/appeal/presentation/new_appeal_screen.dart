@@ -1,56 +1,98 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/network/graphql_client.dart';
+import '../data/appeal_api.dart';
+import '../data/appeal_repository.dart';
+
+/// One appealable part of the result — a paper item, labeled by its section.
+class AppealablePart {
+  const AppealablePart({
+    required this.paperItemId,
+    required this.label,
+    required this.score,
+  });
+
+  final String paperItemId;
+  final String label;
+  final double score;
+}
 
 /// New Appeal form — submit a request to re-evaluate a graded attempt.
 class NewAppealScreen extends StatefulWidget {
-  const NewAppealScreen({super.key});
+  const NewAppealScreen({
+    super.key,
+    required this.candidateResultId,
+    required this.examName,
+    required this.parts,
+  });
+
+  final String candidateResultId;
+  final String examName;
+  final List<AppealablePart> parts;
 
   @override
   State<NewAppealScreen> createState() => _NewAppealScreenState();
 }
 
 class _NewAppealScreenState extends State<NewAppealScreen> {
-  int? _exam = 0;
-  final Set<int> _criteria = {};
+  final _repository =
+      AppealRepository(AppealApi(ApiClient(), GraphQLClient()));
+
+  final Set<String> _selectedPaperItemIds = {};
   final _reason = TextEditingController();
+  final _notes = TextEditingController();
   bool _agree = false;
-
-  static const _exams = [
-    ('Mid-term Speaking Exam', 'Unit 3 · Jun 22 · Score 6.5'),
-    ('Role-Play: At the Airport', 'Unit 5 · Jun 24 · Score 7.0'),
-    ('Describing a Picture', 'Unit 4 · Jun 25 · Score 7.8'),
-  ];
-
-  static const _criteriaLabels = [
-    'Pronunciation',
-    'Fluency',
-    'Grammar',
-    'Vocabulary',
-    'Content',
-  ];
+  bool _submitting = false;
+  String? _error;
 
   @override
   void dispose() {
     _reason.dispose();
+    _notes.dispose();
     super.dispose();
   }
 
   bool get _valid =>
-      _exam != null &&
-      _criteria.isNotEmpty &&
+      _selectedPaperItemIds.isNotEmpty &&
       _reason.text.trim().length >= 10 &&
-      _agree;
+      _agree &&
+      !_submitting;
 
-  void _submit() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _SubmittedSheet(),
-    ).then((_) {
-      if (mounted) Navigator.of(context).maybePop();
+  Future<void> _submit() async {
+    setState(() {
+      _submitting = true;
+      _error = null;
     });
+    try {
+      await _repository.createAppeal(
+        candidateResultId: widget.candidateResultId,
+        paperItemIds: _selectedPaperItemIds.toList(),
+        reason: _reason.text.trim(),
+        notes: _notes.text.trim(),
+      );
+      if (!mounted) return;
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => const _SubmittedSheet(),
+      );
+      if (mounted) Navigator.of(context).maybePop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = _messageFor(e));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  String _messageFor(Object e) {
+    final message = e.toString();
+    // Backend already returns a user-facing Vietnamese message on 4xx.
+    final match = RegExp(r'"message":"([^"]+)"').firstMatch(message);
+    return match?.group(1) ?? 'Could not submit appeal. $message';
   }
 
   @override
@@ -92,8 +134,8 @@ class _NewAppealScreenState extends State<NewAppealScreen> {
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'A teacher will manually re-check the criteria you select. '
-                    'You can appeal within 7 days of a result.',
+                    'A teacher will manually re-check the parts you select. '
+                    'The re-evaluated score may be higher, lower, or unchanged.',
                     style: TextStyle(
                       fontSize: 12.5,
                       height: 1.45,
@@ -106,42 +148,33 @@ class _NewAppealScreenState extends State<NewAppealScreen> {
           ),
           const SizedBox(height: 24),
 
-          const _FieldLabel('Select attempt', required: true),
-          const SizedBox(height: 10),
-          for (int i = 0; i < _exams.length; i++) ...[
-            _ExamOption(
-              title: _exams[i].$1,
-              meta: _exams[i].$2,
-              selected: _exam == i,
-              onTap: () => setState(() => _exam = i),
+          Text(
+            widget.examName,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.muted,
             ),
-            if (i != _exams.length - 1) const SizedBox(height: 8),
-          ],
-          const SizedBox(height: 24),
+          ),
+          const SizedBox(height: 16),
 
-          const _FieldLabel('Criteria to re-evaluate', required: true),
-          const SizedBox(height: 4),
-          const Text(
-            'Select all that you think were scored unfairly.',
-            style: TextStyle(fontSize: 12.5, color: AppColors.muted),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (int i = 0; i < _criteriaLabels.length; i++)
-                _ChoiceChip(
-                  label: _criteriaLabels[i],
-                  selected: _criteria.contains(i),
-                  onTap: () => setState(() {
-                    _criteria.contains(i)
-                        ? _criteria.remove(i)
-                        : _criteria.add(i);
-                  }),
-                ),
-            ],
-          ),
+          const _FieldLabel('Parts to re-evaluate', required: true),
+          const SizedBox(height: 10),
+          for (int i = 0; i < widget.parts.length; i++) ...[
+            _PartOption(
+              part: widget.parts[i],
+              selected: _selectedPaperItemIds.contains(
+                widget.parts[i].paperItemId,
+              ),
+              onTap: () => setState(() {
+                final id = widget.parts[i].paperItemId;
+                _selectedPaperItemIds.contains(id)
+                    ? _selectedPaperItemIds.remove(id)
+                    : _selectedPaperItemIds.add(id);
+              }),
+            ),
+            if (i != widget.parts.length - 1) const SizedBox(height: 8),
+          ],
           const SizedBox(height: 24),
 
           const _FieldLabel('Reason for appeal', required: true),
@@ -150,11 +183,38 @@ class _NewAppealScreenState extends State<NewAppealScreen> {
             controller: _reason,
             onChanged: (_) => setState(() {}),
             maxLines: 5,
-            maxLength: 400,
+            maxLength: 512,
             style: const TextStyle(fontSize: 14, height: 1.5),
             decoration: InputDecoration(
               hintText:
                   'Explain why you believe the score should be reviewed…',
+              hintStyle:
+                  const TextStyle(fontSize: 14, color: AppColors.textGhost),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.all(14),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide:
+                    const BorderSide(color: AppColors.indigo, width: 1.6),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          const _FieldLabel('Notes (optional)'),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _notes,
+            maxLines: 3,
+            maxLength: 512,
+            style: const TextStyle(fontSize: 14, height: 1.5),
+            decoration: InputDecoration(
+              hintText: 'Anything else the reviewer should know…',
               hintStyle:
                   const TextStyle(fontSize: 14, color: AppColors.textGhost),
               filled: true,
@@ -212,7 +272,15 @@ class _NewAppealScreenState extends State<NewAppealScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+
+          if (_error != null) ...[
+            Text(
+              _error!,
+              style: const TextStyle(fontSize: 13, color: AppColors.danger),
+            ),
+            const SizedBox(height: 12),
+          ],
 
           FilledButton(
             onPressed: _valid ? _submit : null,
@@ -226,7 +294,16 @@ class _NewAppealScreenState extends State<NewAppealScreen> {
               textStyle:
                   const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700),
             ),
-            child: const Text('Submit appeal'),
+            child: _submitting
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Submit appeal'),
           ),
         ],
       ),
@@ -258,16 +335,14 @@ class _FieldLabel extends StatelessWidget {
   }
 }
 
-class _ExamOption extends StatelessWidget {
-  const _ExamOption({
-    required this.title,
-    required this.meta,
+class _PartOption extends StatelessWidget {
+  const _PartOption({
+    required this.part,
     required this.selected,
     required this.onTap,
   });
 
-  final String title;
-  final String meta;
+  final AppealablePart part;
   final bool selected;
   final VoidCallback onTap;
 
@@ -289,26 +364,24 @@ class _ExamOption extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.dark,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    meta,
-                    style:
-                        const TextStyle(fontSize: 12.5, color: AppColors.muted),
-                  ),
-                ],
+              child: Text(
+                part.label,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.dark,
+                ),
               ),
             ),
+            Text(
+              part.score.toStringAsFixed(1),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.muted,
+              ),
+            ),
+            const SizedBox(width: 12),
             Container(
               width: 22,
               height: 22,
@@ -325,44 +398,6 @@ class _ExamOption extends StatelessWidget {
                   : null,
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ChoiceChip extends StatelessWidget {
-  const _ChoiceChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.indigo : Colors.white,
-          borderRadius: BorderRadius.circular(99),
-          border: Border.all(
-            color: selected ? AppColors.indigo : const Color(0xFFE2E8F0),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : const Color(0xFF475569),
-          ),
         ),
       ),
     );
@@ -413,8 +448,8 @@ class _SubmittedSheet extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Your request is now pending. A teacher will review it within '
-            '3 school days — you’ll get a notification when it’s resolved.',
+            'Your request is now pending. A teacher will review it — '
+            'you’ll get a notification when it’s resolved.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13.5, height: 1.5, color: AppColors.muted),
           ),
