@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
@@ -89,10 +90,15 @@ class _NewAppealScreenState extends State<NewAppealScreen> {
   }
 
   String _messageFor(Object e) {
-    final message = e.toString();
-    // Backend already returns a user-facing Vietnamese message on 4xx.
-    final match = RegExp(r'"message":"([^"]+)"').firstMatch(message);
-    return match?.group(1) ?? 'Could not submit appeal. $message';
+    // Display backend error directly
+    if (e is DioException) {
+      final data = e.response?.data;
+      final serverMessage = data is Map ? data['message'] : null;
+      if (serverMessage is String && serverMessage.isNotEmpty) {
+        return serverMessage;
+      }
+    }
+    return 'Could not submit appeal. $e';
   }
 
   @override
