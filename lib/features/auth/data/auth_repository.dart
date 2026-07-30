@@ -22,7 +22,8 @@ class AuthRepository {
     required String password,
     required DeviceInfo device
   }) async {
-    final result = await _authApi.login(login: login, password: password, device: device);
+    final deviceWithPushToken = await _withPushToken(device);
+    final result = await _authApi.login(login: login, password: password, device: deviceWithPushToken);
     return _onLoginSuccess(result, device);
   }
 
@@ -30,8 +31,19 @@ class AuthRepository {
     required String idToken,
     required DeviceInfo device,
   }) async {
-    final result = await _authApi.loginWithGoogle(idToken: idToken, device: device);
+    final deviceWithPushToken = await _withPushToken(device);
+    final result = await _authApi.loginWithGoogle(idToken: idToken, device: deviceWithPushToken);
     return _onLoginSuccess(result, device);
+  }
+
+  // a missing FCM token must never block login — the token can still be registered later.
+  Future<DeviceInfo> _withPushToken(DeviceInfo device) async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      return token != null ? device.copyWith(pushToken: token) : device;
+    } catch (e) {
+      return device;
+    }
   }
 
   Future<LoginResponse> _onLoginSuccess(LoginResponse result, DeviceInfo device) async {
