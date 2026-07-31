@@ -502,6 +502,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pzSessionNoSampleAudio => 'No model audio for this sentence yet.';
 
   @override
+  String get pzSessionTurnSaveFailed =>
+      'Your last turn couldn\'t be saved. Please try again.';
+
+  @override
+  String get pzSessionEndedQuotaExceeded =>
+      'You\'ve used up your practice quota. The session has ended.';
+
+  @override
+  String get pzSessionReconnectFailed =>
+      'Connection lost and couldn\'t be restored. The session has ended.';
+
+  @override
   String get pzSummaryTitle => 'Session summary';
 
   @override

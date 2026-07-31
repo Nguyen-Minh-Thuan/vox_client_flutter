@@ -206,6 +206,9 @@
   "pzSessionExitLeave": "Leave",
   "pzSessionPlaybackUnavailable": "No recording available yet.",
   "pzSessionNoSampleAudio": "No model audio for this sentence yet.",
+  "pzSessionTurnSaveFailed": "Your last turn couldn't be saved. Please try again.",
+  "pzSessionEndedQuotaExceeded": "You've used up your practice quota. The session has ended.",
+  "pzSessionReconnectFailed": "Connection lost and couldn't be restored. The session has ended.",
 
   "pzSummaryTitle": "Session summary",
   "pzSummaryHeader": "{topic} · {minutes} MIN",

@@ -206,6 +206,9 @@
   "pzSessionExitLeave": "Thoát",
   "pzSessionPlaybackUnavailable": "Chưa có bản ghi âm nào.",
   "pzSessionNoSampleAudio": "Chưa có audio mẫu cho câu này.",
+  "pzSessionTurnSaveFailed": "Không lưu được lượt trả lời vừa rồi. Vui lòng thử lại.",
+  "pzSessionEndedQuotaExceeded": "Bạn đã dùng hết hạn mức luyện tập. Buổi luyện đã kết thúc.",
+  "pzSessionReconnectFailed": "Mất kết nối và không thể kết nối lại. Buổi luyện đã kết thúc.",
 
   "pzSummaryTitle": "Tổng kết buổi nói",
   "pzSummaryHeader": "{topic} · {minutes} PHÚT",

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:record/record.dart';
 
 import '../../../app/theme.dart';
@@ -48,6 +49,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   final _recorder = AudioRecorder();
   final _realtimeClient = PracticeRealtimeClient();
   final _scrollController = ScrollController();
+  final _tts = FlutterTts();
 
   // Both only run while the mic is live — an idle session should not keep a
   // 60 fps ticker alive.
@@ -83,6 +85,13 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   bool _speakingNow = false;
   bool _hasSpokenThisTurn = false;
 
+  /// First `vad_speech_start` / latest `vad_speech_end` for the CURRENT turn — the gap between
+  /// them is the actual spoken duration sent as `turn_end.duration_seconds`, which Java uses to
+  /// consume the student's PRACTICE quota (see SubmitPracticeTurnUseCase). Reset every time a
+  /// new turn starts (mirrors WPF's SpeechTurnCoordinator.CaptureAsync.DurationSeconds).
+  DateTime? _speechStartedAt;
+  DateTime? _speechEndedAt;
+
   /// Buffered from final_transcript events for the turn currently being answered.
   final StringBuffer _liveTranscript = StringBuffer();
 
@@ -92,8 +101,19 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   /// "not ready yet" -- CorrectionCard's continue action shows a loading state then.
   String? _pendingPromptText;
 
+  /// Question the student is currently on -- needed to send `resume` after a dropped WS
+  /// reconnects (mục 2.4c: "exam có cơ chế reconnect", mirrored here). Updated on the initial
+  /// question_start and every subsequent next_question push.
+  String? _currentQuestionId;
+  bool _reconnecting = false;
+
   bool _sessionEnded = false;
   bool _endingSession = false;
+  /// Distinct from `_sessionEnded` (which only means "UI should show the finish state" and
+  /// gets set by `_handleSessionEndedByServer` too): guards `_endSession` so the
+  /// `endPracticeSession` mutation still runs exactly once even when the server ended the
+  /// session first (budget/quota exhausted) and the student taps "Hoàn tất" afterwards.
+  bool _javaSessionClosed = false;
 
   /// Normalised 0..1 mic level driving the waveform.
   double _level = 0.35;
@@ -121,7 +141,46 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     _scrollController.dispose();
     _recorder.dispose();
     _realtimeClient.dispose();
+    _tts.stop();
     super.dispose();
+  }
+
+  /// Actually speaks the AI's turns out loud -- mirrors WPF's
+  /// `QuestionPresentationService.HandleSpeakRequested` -> `_avatarSpeaker.SpeakAsync(...)`.
+  /// Without this, `speak` events only ever produced a silent text bubble.
+  Future<void> _initTts() async {
+    await _tts.setLanguage('en-US');
+    await _tts.setSpeechRate(0.48);
+    _tts.setCompletionHandler(_onAiSpeechDone);
+    _tts.setCancelHandler(_onAiSpeechDone);
+    _tts.setErrorHandler((_) => _onAiSpeechDone());
+  }
+
+  /// The silence-timeout window for the student's response only starts once the AI has
+  /// actually finished speaking the prompt -- mirrors WPF pausing `SpeechTurnCoordinator`
+  /// while `AvatarSpeakingChanged` is true. Guarded on `recording` so a stray/late
+  /// completion (e.g. after the farewell utterance) doesn't arm a timer post-session.
+  void _onAiSpeechDone() {
+    if (!mounted) return;
+    // _hasSpokenThisTurn guards against a completion callback that arrives AFTER a barge-in
+    // already stopped the TTS and the student is mid-answer -- re-arming the initial-silence
+    // timer at that point would wrongly reset progress on a turn already underway.
+    if (_recorderState == _RecorderState.recording && !_hasSpokenThisTurn) {
+      // Tells Python the TTS-playback window is over so it can re-clear the turn audio
+      // buffer -- shrinks how much of the AI's own speech/silence can sit at the front of
+      // the WAV handed to Pronunciation Assessment (see connection.py's ready_to_answer).
+      _realtimeClient.send({'type': 'ready_to_answer'});
+      _armInitialSilenceTimer();
+    }
+  }
+
+  Future<void> _speakAi(String text, {String? rate}) async {
+    if (text.trim().isEmpty) {
+      _onAiSpeechDone();
+      return;
+    }
+    await _tts.setSpeechRate(rate == '-20%' ? 0.36 : 0.48);
+    await _tts.speak(text);
   }
 
   Future<void> _load() async {
@@ -130,6 +189,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       _error = null;
     });
     try {
+      await _initTts();
       final started = await _repository.startSession(widget.topic);
       if (!mounted) return;
       setState(() {
@@ -138,6 +198,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         _nextTurnOrder = 1;
       });
       _eventsSub = _realtimeClient.events.listen(_handleRealtimeEvent);
+      _currentQuestionId = started.firstQuestion['questionId']?.toString();
       await _realtimeClient.connect(started.session.id);
       _realtimeClient.send({
         'type': 'question_start',
@@ -149,13 +210,17 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         },
         'language': 'en-US',
       });
+      // Audio must actually be streaming (recorderState == recording) BEFORE the first
+      // prompt is presented -- otherwise, if TTS finishes speaking while the mic-permission
+      // dialog is still open, _onAiSpeechDone sees recorderState != recording and never arms
+      // the silence timer, leaving the first turn waiting forever.
+      await _startAudioStream();
       // First prompt of the session has nothing to "continue" from -- present it right
       // away instead of waiting for a tap (mirrors the mock's _leadingAiTurns behaviour).
       _realtimeClient.send({
         'type': 'present_question',
         'prompt_text': started.firstQuestion['questionText'],
       });
-      await _startAudioStream();
       _startClock();
     } catch (e) {
       if (!mounted) return;
@@ -191,8 +256,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     if (!mounted) return;
     _wave.repeat();
     _pulse.repeat(reverse: true);
+    // Silence-timeout arms once the AI finishes speaking the first prompt (see
+    // _onAiSpeechDone), not immediately -- the student can't answer a question they
+    // haven't heard yet.
     setState(() => _recorderState = _RecorderState.recording);
-    _armInitialSilenceTimer();
   }
 
   void _handleAudioChunk(Uint8List chunk) {
@@ -212,7 +279,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   void _handleRealtimeEvent(Map<String, dynamic> event) {
     switch (event['type']) {
       case 'speak':
-        _appendAiTurn((event['text'] as String?) ?? '');
+        final text = (event['text'] as String?) ?? '';
+        _appendAiTurn(text);
+        _speakAi(text, rate: event['rate'] as String?);
       case 'vad_speech_start':
         _handleSpeechStart();
       case 'vad_speech_end':
@@ -228,14 +297,18 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       case 'correction':
         _handleCorrection(event);
       case 'next_question':
+        final question = event['question'] as Map<String, dynamic>?;
+        _currentQuestionId = question?['questionId']?.toString();
         setState(() {
-          _pendingPromptText =
-              (event['question'] as Map<String, dynamic>?)?['questionText'] as String?;
+          _pendingPromptText = question?['questionText'] as String?;
         });
+      case 'resume_ack':
+        _handleResumeAck(event);
       case 'practice_session_ended':
-        _handleSessionEndedByServer();
-      case 'error':
+        _handleSessionEndedByServer(event['reason'] as String?);
       case 'connection_closed':
+        _handleConnectionDropped();
+      case 'error':
         // Surfaced via _toast rather than _error so a mid-session drop doesn't blow away
         // the conversation already rendered.
         if (mounted) {
@@ -262,10 +335,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     _turnTimer?.cancel();
     _speakingNow = true;
     _hasSpokenThisTurn = true;
+    _speechStartedAt ??= DateTime.now();
+    // Barge-in: if the student starts talking while the AI is still mid-sentence, cut it off
+    // immediately rather than let it keep talking over them.
+    _tts.stop();
   }
 
   void _handleSpeechEnd() {
     _speakingNow = false;
+    _speechEndedAt = DateTime.now();
     _armGracePeriodTimer();
   }
 
@@ -289,6 +367,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     final transcript = _liveTranscript.toString();
     _liveTranscript.clear();
 
+    final start = _speechStartedAt;
+    final end = _speechEndedAt;
+    final durationSeconds = (start != null && end != null && end.isAfter(start))
+        ? end.difference(start).inMilliseconds / 1000.0
+        : 0.0;
+    _speechStartedAt = null;
+    _speechEndedAt = null;
+
     if (!mounted) return;
     setState(() {
       _recorderState = _RecorderState.processing;
@@ -301,7 +387,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       _nextTurnOrder++;
     });
     _scrollToEnd();
-    _realtimeClient.send({'type': 'turn_end'});
+    _realtimeClient.send({'type': 'turn_end', 'duration_seconds': durationSeconds});
   }
 
   void _handleDecision(Map<String, dynamic> decision) {
@@ -310,6 +396,68 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     } else {
       _pendingPromptText = null;
     }
+  }
+
+  /// Server's reply to `resume` (see `_handleConnectionDropped`) -- mirrors WPF's own
+  /// resume_ack handling (RealtimeSessionClient.cs): if a `decision` is attached, Python
+  /// finished processing a turn that was still in flight when the connection dropped, so
+  /// apply it exactly like a normal `decision` event to keep state consistent.
+  void _handleResumeAck(Map<String, dynamic> event) {
+    final decision = event['decision'] as Map<String, dynamic>?;
+    if (decision != null) {
+      _handleDecision(decision);
+      if (mounted) setState(() => _recorderState = _RecorderState.idle);
+    } else {
+      final promptToSpeak = event['prompt_to_speak'] as String?;
+      if (promptToSpeak != null && promptToSpeak.trim().isNotEmpty) {
+        // Reconnected while idle (nothing was mid-flight) -- the server tells us the prompt
+        // that was active; re-send present_question with it exactly like any other
+        // transition, which re-triggers TTS + arms the silence timer once it finishes.
+        _realtimeClient.send({'type': 'present_question', 'prompt_text': promptToSpeak});
+        _hasSpokenThisTurn = false;
+        _speakingNow = false;
+        _speechStartedAt = null;
+        _speechEndedAt = null;
+        if (mounted) setState(() => _recorderState = _RecorderState.recording);
+      }
+    }
+    _reconnecting = false;
+  }
+
+  /// An unexpected WS drop mid-session (network blip, not a deliberate exit/server-initiated
+  /// end) -- reconnect to the SAME session and tell the server to `resume` from the question
+  /// the student was already on, instead of losing progress. Mirrors the explicitly-designed
+  /// split from mục 2.4c: transient disconnect resumes, only a deliberate exit ends the session.
+  Future<void> _handleConnectionDropped() async {
+    if (!mounted || _sessionEnded || _endingSession || _reconnecting) return;
+    final session = _session;
+    final questionId = _currentQuestionId;
+    if (session == null || questionId == null) return;
+    _reconnecting = true;
+    _turnTimer?.cancel();
+    _tts.stop();
+
+    const maxAttempts = 3;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await _realtimeClient.connect(session.id);
+        _realtimeClient.send({'type': 'resume', 'question_id': questionId});
+        return;
+      } catch (_) {
+        if (attempt == maxAttempts) break;
+        await Future.delayed(Duration(seconds: attempt * 2));
+      }
+    }
+    // Couldn't get back on the WS after retrying -- don't leave the student stuck mid-session
+    // forever. The server-side heartbeat sweep (PracticeSessionHeartbeatCleanupJob) closes the
+    // Java session as stale on its own, so just reflect that locally.
+    _reconnecting = false;
+    if (!mounted) return;
+    _toast(AppLocalizations.of(context)!.pzSessionReconnectFailed);
+    setState(() {
+      _sessionEnded = true;
+      _recorderState = _RecorderState.idle;
+    });
   }
 
   void _handleCorrection(Map<String, dynamic> event) {
@@ -375,18 +523,32 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     _realtimeClient.send({'type': 'present_question', 'prompt_text': promptText});
     _hasSpokenThisTurn = false;
     _speakingNow = false;
+    _speechStartedAt = null;
+    _speechEndedAt = null;
     if (!mounted) return;
+    // Silence-timeout arms once the AI finishes speaking this prompt (see
+    // _onAiSpeechDone), not immediately.
     setState(() => _recorderState = _RecorderState.recording);
-    _armInitialSilenceTimer();
   }
 
   bool get _continueReady => _pendingPromptText != null;
 
-  void _handleSessionEndedByServer() {
+  void _handleSessionEndedByServer(String? reason) {
     _turnTimer?.cancel();
+    _tts.stop();
     _audioStreamSub?.cancel();
     _recorder.stop();
     if (!mounted) return;
+    // quota_exceeded/failed (submit_turn couldn't save or Java rejected the last turn, see
+    // connection.py._after_turn) mean the last turn is unrecoverable -- end the session outright
+    // rather than let "Tiếp tục" silently proceed past data loss (mục 2.4c). Tell the student why
+    // instead of leaving them guessing.
+    final l10n = AppLocalizations.of(context)!;
+    if (reason == 'quota_exceeded') {
+      _toast(l10n.pzSessionEndedQuotaExceeded);
+    } else if (reason == 'failed') {
+      _toast(l10n.pzSessionTurnSaveFailed);
+    }
     setState(() {
       _sessionEnded = true;
       _recorderState = _RecorderState.idle;
@@ -447,7 +609,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   /// clientInitiated=false skips the WS handshake (server already ended the session itself,
   /// e.g. budget_exhausted) and just tidies up + calls the mutation.
   Future<void> _endSession({required bool clientInitiated}) async {
-    if (_endingSession || _sessionEnded) return;
+    if (_endingSession || _javaSessionClosed) return;
     _endingSession = true;
     _turnTimer?.cancel();
     await _audioStreamSub?.cancel();
@@ -479,6 +641,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         // the server independently expires stale IN_PROGRESS sessions.
       }
     }
+    _javaSessionClosed = true;
     _sessionEnded = true;
   }
 

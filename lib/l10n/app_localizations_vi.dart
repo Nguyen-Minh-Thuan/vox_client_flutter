@@ -501,6 +501,18 @@ class AppLocalizationsVi extends AppLocalizations {
   String get pzSessionNoSampleAudio => 'Chưa có audio mẫu cho câu này.';
 
   @override
+  String get pzSessionTurnSaveFailed =>
+      'Không lưu được lượt trả lời vừa rồi. Vui lòng thử lại.';
+
+  @override
+  String get pzSessionEndedQuotaExceeded =>
+      'Bạn đã dùng hết hạn mức luyện tập. Buổi luyện đã kết thúc.';
+
+  @override
+  String get pzSessionReconnectFailed =>
+      'Mất kết nối và không thể kết nối lại. Buổi luyện đã kết thúc.';
+
+  @override
   String get pzSummaryTitle => 'Tổng kết buổi nói';
 
   @override

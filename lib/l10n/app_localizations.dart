@@ -1022,6 +1022,24 @@ abstract class AppLocalizations {
   /// **'No model audio for this sentence yet.'**
   String get pzSessionNoSampleAudio;
 
+  /// No description provided for @pzSessionTurnSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your last turn couldn\'t be saved. Please try again.'**
+  String get pzSessionTurnSaveFailed;
+
+  /// No description provided for @pzSessionEndedQuotaExceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'You've used up your practice quota. The session has ended.'**
+  String get pzSessionEndedQuotaExceeded;
+
+  /// No description provided for @pzSessionReconnectFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection lost and couldn't be restored. The session has ended.'**
+  String get pzSessionReconnectFailed;
+
   /// No description provided for @pzSummaryTitle.
   ///
   /// In en, this message translates to:
