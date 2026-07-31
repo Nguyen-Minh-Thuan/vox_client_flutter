@@ -49,7 +49,7 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
       final query = _searchController.text;
       final topics = query.trim().isEmpty
           ? await _repository.getTopics(_filter)
-          : await _repository.searchTopics(query);
+          : (await _repository.searchTopics(query)).topics;
       if (!mounted) return;
       setState(() => _topics = topics);
     } catch (e) {

@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 import '../../../app/theme.dart';
@@ -10,6 +10,7 @@ import '../../../l10n/app_localizations.dart';
 import '../data/models/practice_session.dart';
 import '../data/models/practice_topic.dart';
 import '../data/personalize_repository.dart';
+import '../data/practice_realtime_client.dart';
 import 'correction_card.dart';
 import 'personalize_styles.dart';
 import 'session_summary_screen.dart';
@@ -17,11 +18,21 @@ import 'session_summary_screen.dart';
 /// What the mic control is doing right now.
 enum _RecorderState { idle, recording, processing }
 
+/// Silence-timeout tuning mirrors WPF's SpeechTurnCoordinator.CaptureAsync
+/// (DesktopApp/VoxOralExam/.../Services/ExamFlow/Turn/SpeechTurnCoordinator.cs) --
+/// initial timeout before any speech at all (chốt 8s, mục 2.8), then a grace period after
+/// vad_speech_end that tolerates a natural mid-answer pause before really ending the turn.
+const _kInitialSilenceTimeout = Duration(seconds: 8);
+const _kSpeechEndGracePeriod = Duration(seconds: 3);
+
 /// Design `1c` — the live 1-1 speaking session with inline corrections.
 ///
-/// The microphone is real: the learner's answer is captured to a temp file and
-/// the amplitude drives the waveform. The *conversation* is still scripted —
-/// stopping a recording reveals the next scripted turn instead of uploading.
+/// Real realtime backend (gói 11): continuous PCM16 mic streaming over
+/// `PracticeRealtimeClient`, server-driven turn/question flow. Click-to-continue —
+/// the mic button only mutes/unmutes; advancing to the next prompt (follow-up or a new
+/// MAIN question alike) always waits for the student to tap "Tiếp tục" on the correction
+/// card. UI/widgets below are unchanged from the original mock on purpose; only the
+/// state/data layer is real now.
 class PracticeSessionScreen extends StatefulWidget {
   const PracticeSessionScreen({super.key, required this.topic});
 
@@ -35,6 +46,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     with TickerProviderStateMixin {
   final _repository = PersonalizeRepository();
   final _recorder = AudioRecorder();
+  final _realtimeClient = PracticeRealtimeClient();
   final _scrollController = ScrollController();
 
   // Both only run while the mic is live — an idle session should not keep a
@@ -47,19 +59,41 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   );
 
   StreamSubscription<Amplitude>? _amplitudeSub;
+  StreamSubscription<Uint8List>? _audioStreamSub;
+  StreamSubscription<Map<String, dynamic>>? _eventsSub;
   Timer? _clock;
+  Timer? _turnTimer;
 
   bool _loading = true;
   String? _error;
   PracticeSession? _session;
 
-  /// Turns revealed so far. Grows as the learner records.
+  /// Turns revealed so far — grows as real WS events arrive, no scripted list anymore.
   final List<PracticeTurn> _visible = [];
-
-  /// Index into `_session.turns` of the next turn to reveal.
-  int _cursor = 0;
+  int _nextTurnOrder = 1;
 
   _RecorderState _recorderState = _RecorderState.idle;
+
+  /// Mic mute toggle — independent of `_recorderState` (continuous-listen model, see
+  /// module docstring): muted just streams silence instead of stopping the connection,
+  /// mirrors WPF's ToggleMuteCommand/TurnAudioRecorder.IsMuted.
+  bool _muted = false;
+
+  /// True once speech has been detected for the CURRENT turn (silence-timeout bookkeeping).
+  bool _speakingNow = false;
+  bool _hasSpokenThisTurn = false;
+
+  /// Buffered from final_transcript events for the turn currently being answered.
+  final StringBuffer _liveTranscript = StringBuffer();
+
+  /// Buffered next prompt, ready for when "Tiếp tục" is tapped -- either the follow-up
+  /// prompt (from `decision.next_prompt_text`, arrives fast) or a brand-new MAIN question's
+  /// text (from `next_question`, arrives async once Java/LLM resolves it). Null means
+  /// "not ready yet" -- CorrectionCard's continue action shows a loading state then.
+  String? _pendingPromptText;
+
+  bool _sessionEnded = false;
+  bool _endingSession = false;
 
   /// Normalised 0..1 mic level driving the waveform.
   double _level = 0.35;
@@ -67,11 +101,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   /// Seconds since the session opened.
   int _elapsed = 0;
 
-  /// Path of the most recent recording, handed to the summary screen.
-  String? _lastRecordingPath;
-
-  bool get _isComplete =>
-      _session != null && _cursor >= _session!.turns.length;
+  bool get _isComplete => _sessionEnded;
 
   @override
   void initState() {
@@ -82,11 +112,15 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   @override
   void dispose() {
     _amplitudeSub?.cancel();
+    _audioStreamSub?.cancel();
+    _eventsSub?.cancel();
     _clock?.cancel();
+    _turnTimer?.cancel();
     _wave.dispose();
     _pulse.dispose();
     _scrollController.dispose();
     _recorder.dispose();
+    _realtimeClient.dispose();
     super.dispose();
   }
 
@@ -96,15 +130,32 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       _error = null;
     });
     try {
-      final session = await _repository.startSession(widget.topic);
+      final started = await _repository.startSession(widget.topic);
       if (!mounted) return;
       setState(() {
-        _session = session;
-        _visible
-          ..clear()
-          ..addAll(_leadingAiTurns(session));
-        _cursor = _visible.length;
+        _session = started.session;
+        _visible.clear();
+        _nextTurnOrder = 1;
       });
+      _eventsSub = _realtimeClient.events.listen(_handleRealtimeEvent);
+      await _realtimeClient.connect(started.session.id);
+      _realtimeClient.send({
+        'type': 'question_start',
+        'question_id': started.firstQuestion['questionId'],
+        'paper_item_id': started.firstQuestion['slot']?.toString(),
+        'question': {
+          'question_text': started.firstQuestion['questionText'],
+          'max_response_seconds': started.firstQuestion['maxResponseSeconds'],
+        },
+        'language': 'en-US',
+      });
+      // First prompt of the session has nothing to "continue" from -- present it right
+      // away instead of waiting for a tap (mirrors the mock's _leadingAiTurns behaviour).
+      _realtimeClient.send({
+        'type': 'present_question',
+        'prompt_text': started.firstQuestion['questionText'],
+      });
+      await _startAudioStream();
       _startClock();
     } catch (e) {
       if (!mounted) return;
@@ -114,14 +165,38 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     }
   }
 
-  /// The AI turns that open the conversation, shown before the first recording.
-  List<PracticeTurn> _leadingAiTurns(PracticeSession session) {
-    final leading = <PracticeTurn>[];
-    for (final turn in session.turns) {
-      if (turn.speaker != Speaker.ai) break;
-      leading.add(turn);
+  Future<void> _startAudioStream() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (!await _recorder.hasPermission()) {
+      if (mounted) _toast(l10n.pzSessionMicDenied);
+      return;
     }
-    return leading;
+    final stream = await _recorder.startStream(
+      const RecordConfig(
+        encoder: AudioEncoder.pcm16bits,
+        sampleRate: 16000,
+        numChannels: 1,
+      ),
+    );
+    _audioStreamSub = stream.listen(_handleAudioChunk);
+
+    _amplitudeSub?.cancel();
+    _amplitudeSub = _recorder
+        .onAmplitudeChanged(const Duration(milliseconds: 120))
+        .listen((amplitude) {
+      if (!mounted) return;
+      setState(() => _level = _normalise(amplitude.current));
+    });
+
+    if (!mounted) return;
+    _wave.repeat();
+    _pulse.repeat(reverse: true);
+    setState(() => _recorderState = _RecorderState.recording);
+    _armInitialSilenceTimer();
+  }
+
+  void _handleAudioChunk(Uint8List chunk) {
+    _realtimeClient.sendAudioFrame(_muted ? Uint8List(chunk.length) : chunk);
   }
 
   void _startClock() {
@@ -132,123 +207,203 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     });
   }
 
-  // ── Recording ─────────────────────────────────────────────────────────────
+  // ── Realtime protocol ────────────────────────────────────────────────────
 
-  Future<void> _toggleRecording() async {
-    switch (_recorderState) {
-      case _RecorderState.recording:
-        await _stopRecording();
-      case _RecorderState.idle:
-        await _startRecording();
-      case _RecorderState.processing:
-        break;
+  void _handleRealtimeEvent(Map<String, dynamic> event) {
+    switch (event['type']) {
+      case 'speak':
+        _appendAiTurn((event['text'] as String?) ?? '');
+      case 'vad_speech_start':
+        _handleSpeechStart();
+      case 'vad_speech_end':
+        _handleSpeechEnd();
+      case 'final_transcript':
+        final text = event['text'] as String?;
+        if (text != null && text.trim().isNotEmpty) {
+          if (_liveTranscript.isNotEmpty) _liveTranscript.write(' ');
+          _liveTranscript.write(text.trim());
+        }
+      case 'decision':
+        _handleDecision(event['decision'] as Map<String, dynamic>? ?? const {});
+      case 'correction':
+        _handleCorrection(event);
+      case 'next_question':
+        setState(() {
+          _pendingPromptText =
+              (event['question'] as Map<String, dynamic>?)?['questionText'] as String?;
+        });
+      case 'practice_session_ended':
+        _handleSessionEndedByServer();
+      case 'error':
+      case 'connection_closed':
+        // Surfaced via _toast rather than _error so a mid-session drop doesn't blow away
+        // the conversation already rendered.
+        if (mounted) {
+          _toast('${event['text'] ?? event['type']}');
+        }
     }
   }
 
-  Future<void> _startRecording() async {
-    final l10n = AppLocalizations.of(context)!;
-    try {
-      if (!await _recorder.hasPermission()) {
-        if (mounted) _toast(l10n.pzSessionMicDenied);
-        return;
-      }
-      final dir = await getTemporaryDirectory();
-      final path =
-          '${dir.path}/vox_practice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      await _recorder.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc),
-        path: path,
-      );
-
-      _amplitudeSub?.cancel();
-      _amplitudeSub = _recorder
-          .onAmplitudeChanged(const Duration(milliseconds: 120))
-          .listen((amplitude) {
-        if (!mounted) return;
-        setState(() => _level = _normalise(amplitude.current));
-      });
-
-      if (!mounted) return;
-      _wave.repeat();
-      _pulse.repeat(reverse: true);
-      setState(() {
-        _recorderState = _RecorderState.recording;
-        _lastRecordingPath = path;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      _toast('${l10n.pzSessionRecordError}\n$e');
-      setState(() => _recorderState = _RecorderState.idle);
-    }
-  }
-
-  Future<void> _stopRecording() async {
-    _wave.stop();
-    _pulse
-      ..stop()
-      ..value = 0;
-    setState(() => _recorderState = _RecorderState.processing);
-    await _amplitudeSub?.cancel();
-    _amplitudeSub = null;
-    try {
-      final path = await _recorder.stop();
-      if (path != null) _lastRecordingPath = path;
-    } catch (_) {
-      // A failed stop should not block the scripted flow.
-    }
+  void _appendAiTurn(String text) {
+    if (text.trim().isEmpty) return;
     if (!mounted) return;
-    setState(() => _level = 0.35);
-    await _revealNextTurns();
+    setState(() {
+      _visible.add(PracticeTurn(
+        id: 'ai-${_visible.length}',
+        turnOrder: _nextTurnOrder,
+        speaker: Speaker.ai,
+        text: text,
+      ));
+    });
+    _scrollToEnd();
+  }
+
+  void _handleSpeechStart() {
+    _turnTimer?.cancel();
+    _speakingNow = true;
+    _hasSpokenThisTurn = true;
+  }
+
+  void _handleSpeechEnd() {
+    _speakingNow = false;
+    _armGracePeriodTimer();
+  }
+
+  void _armInitialSilenceTimer() {
+    _turnTimer?.cancel();
+    _turnTimer = Timer(_kInitialSilenceTimeout, () {
+      if (!_hasSpokenThisTurn) _sendTurnEnd();
+    });
+  }
+
+  void _armGracePeriodTimer() {
+    _turnTimer?.cancel();
+    _turnTimer = Timer(_kSpeechEndGracePeriod, () {
+      if (!_speakingNow) _sendTurnEnd();
+    });
+  }
+
+  void _sendTurnEnd() {
+    if (_recorderState != _RecorderState.recording) return;
+    _turnTimer?.cancel();
+    final transcript = _liveTranscript.toString();
+    _liveTranscript.clear();
+
+    if (!mounted) return;
+    setState(() {
+      _recorderState = _RecorderState.processing;
+      _visible.add(PracticeTurn(
+        id: 'student-$_nextTurnOrder',
+        turnOrder: _nextTurnOrder,
+        speaker: Speaker.student,
+        text: transcript,
+      ));
+      _nextTurnOrder++;
+    });
+    _scrollToEnd();
+    _realtimeClient.send({'type': 'turn_end'});
+  }
+
+  void _handleDecision(Map<String, dynamic> decision) {
+    if (decision['should_continue'] == true) {
+      _pendingPromptText = decision['next_prompt_text'] as String?;
+    } else {
+      _pendingPromptText = null;
+    }
+  }
+
+  void _handleCorrection(Map<String, dynamic> event) {
+    if (!mounted) return;
+    final rawCorrections = (event['corrections'] as List?) ?? const [];
+    final corrections = rawCorrections
+        .cast<Map<String, dynamic>>()
+        .map(_correctionFromJson)
+        .toList();
+    setState(() {
+      final index =
+          _visible.lastIndexWhere((t) => t.speaker == Speaker.student);
+      if (index != -1) {
+        final turn = _visible[index];
+        _visible[index] = PracticeTurn(
+          id: turn.id,
+          turnOrder: turn.turnOrder,
+          speaker: turn.speaker,
+          text: turn.text,
+          score: turn.score,
+          spans: turn.spans,
+          corrections: corrections,
+        );
+      }
+      _recorderState = _RecorderState.idle;
+    });
+    _scrollToEnd();
+  }
+
+  Correction _correctionFromJson(Map<String, dynamic> json) {
+    return Correction(
+      type: _correctionTypeFromCategory(json['category'] as String?),
+      before: json['original_text'] as String?,
+      after: json['corrected_text'] as String?,
+      note: (json['explanation'] as String?) ?? '',
+    );
+  }
+
+  CorrectionType _correctionTypeFromCategory(String? category) {
+    switch (category) {
+      case 'vocabulary':
+        return CorrectionType.vocabulary;
+      case 'pronunciation':
+        return CorrectionType.pronunciation;
+      case 'fluency':
+        return CorrectionType.fluency;
+      default:
+        return CorrectionType.grammar;
+    }
+  }
+
+  /// Footer action of the (relabelled) CorrectionCard — the ONE new user action in this
+  /// screen (mục 2.7b): advance to whatever's next (follow-up or a new MAIN question
+  /// alike, same handling either way), only once it's actually buffered.
+  Future<void> _handleContinue() async {
+    final promptText = _pendingPromptText;
+    if (promptText == null) {
+      // Still resolving (bậc 4 / LLM taking a moment) -- CorrectionCard shows a loading
+      // state for this tap instead of doing nothing silently, see correction_card.dart.
+      return;
+    }
+    _pendingPromptText = null;
+    _realtimeClient.send({'type': 'present_question', 'prompt_text': promptText});
+    _hasSpokenThisTurn = false;
+    _speakingNow = false;
+    if (!mounted) return;
+    setState(() => _recorderState = _RecorderState.recording);
+    _armInitialSilenceTimer();
+  }
+
+  bool get _continueReady => _pendingPromptText != null;
+
+  void _handleSessionEndedByServer() {
+    _turnTimer?.cancel();
+    _audioStreamSub?.cancel();
+    _recorder.stop();
+    if (!mounted) return;
+    setState(() {
+      _sessionEnded = true;
+      _recorderState = _RecorderState.idle;
+    });
+  }
+
+  // ── Mic mute toggle (NOT start/stop recording anymore) ──────────────────
+
+  void _toggleMute() {
+    if (_recorderState == _RecorderState.processing) return;
+    setState(() => _muted = !_muted);
   }
 
   /// dBFS (roughly -45..0) → 0..1.
   double _normalise(double dbfs) {
     const floor = 45.0;
     return ((dbfs + floor) / floor).clamp(0.05, 1.0);
-  }
-
-  /// Reveals the learner's scripted turn, then the AI's follow-up.
-  Future<void> _revealNextTurns() async {
-    final session = _session;
-    if (session == null || _cursor >= session.turns.length) {
-      if (mounted) setState(() => _recorderState = _RecorderState.idle);
-      return;
-    }
-
-    // Grading pause so the "listening" state is visible.
-    await Future<void>.delayed(const Duration(milliseconds: 700));
-    if (!mounted) return;
-    setState(() {
-      _visible.add(session.turns[_cursor]);
-      _cursor++;
-      _recorderState = _RecorderState.idle;
-    });
-    _scrollToEnd();
-
-    // Follow-up prompt from the AI, if the script has one.
-    if (_cursor < session.turns.length &&
-        session.turns[_cursor].speaker == Speaker.ai) {
-      await Future<void>.delayed(const Duration(milliseconds: 900));
-      if (!mounted) return;
-      setState(() {
-        _visible.add(session.turns[_cursor]);
-        _cursor++;
-      });
-      _scrollToEnd();
-    }
-  }
-
-  /// Drops the last learner turn so it can be recorded again.
-  void _sayAgain() {
-    final index = _visible.lastIndexWhere((t) => t.speaker == Speaker.student);
-    if (index == -1) return;
-    setState(() {
-      // Remove the learner turn and everything the AI said after it, then
-      // rewind the cursor by the same amount.
-      final removed = _visible.length - index;
-      _visible.removeRange(index, _visible.length);
-      _cursor -= removed;
-    });
   }
 
   void _scrollToEnd() {
@@ -263,25 +418,68 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   }
 
   void _toast(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  // ── Navigation ────────────────────────────────────────────────────────────
+  // ── Navigation / ending the session ──────────────────────────────────────
 
   Future<void> _finish() async {
     final session = _session;
     if (session == null) return;
     _clock?.cancel();
+    await _endSession(clientInitiated: false);
+    if (!mounted) return;
     await Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => SessionSummaryScreen(
           sessionId: session.id,
-          recordingPath: _lastRecordingPath,
+          recordingPath: null,
         ),
       ),
     );
+  }
+
+  /// Mirrors ExamAttemptRunner.RequestSubmit()'s exact ordering (mục 2.9 điểm 2): WS
+  /// practice_end -> await practice_end_ack -> close WS -> THEN endPracticeSession mutation.
+  /// clientInitiated=false skips the WS handshake (server already ended the session itself,
+  /// e.g. budget_exhausted) and just tidies up + calls the mutation.
+  Future<void> _endSession({required bool clientInitiated}) async {
+    if (_endingSession || _sessionEnded) return;
+    _endingSession = true;
+    _turnTimer?.cancel();
+    await _audioStreamSub?.cancel();
+    try {
+      await _recorder.stop();
+    } catch (_) {
+      // Best-effort -- the session is ending either way.
+    }
+
+    if (clientInitiated && _realtimeClient.isConnected) {
+      final ack = _realtimeClient.events
+          .firstWhere((e) => e['type'] == 'practice_end_ack')
+          .timeout(const Duration(seconds: 5), onTimeout: () => const {});
+      _realtimeClient.send({'type': 'practice_end'});
+      await ack;
+    }
+    await _realtimeClient.close();
+
+    final session = _session;
+    if (session != null) {
+      try {
+        await _repository.endPracticeSession(
+          sessionId: session.id,
+          helpRequestCount: 0,
+          longPauseCount: 0,
+        );
+      } catch (_) {
+        // Ending the local session view must not get stuck on a network hiccup here --
+        // the server independently expires stale IN_PROGRESS sessions.
+      }
+    }
+    _sessionEnded = true;
   }
 
   Future<bool> _confirmExit() async {
@@ -307,6 +505,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     return leave ?? false;
   }
 
+  Future<void> _handleExitRequest() async {
+    final leave = await _confirmExit();
+    if (!mounted || !leave) return;
+    await _endSession(clientInitiated: true);
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -316,9 +522,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
-        final leave = await _confirmExit();
-        if (!context.mounted || !leave) return;
-        Navigator.of(context).pop();
+        await _handleExitRequest();
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFFCFCFD),
@@ -329,11 +533,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
                 title: widget.topic.title,
                 elapsed: _elapsed,
                 focusTags: _session?.focusTags ?? widget.topic.focusTags,
-                onClose: () async {
-                  final leave = await _confirmExit();
-                  if (!context.mounted || !leave) return;
-                  Navigator.of(context).pop();
-                },
+                onClose: _handleExitRequest,
               ),
               Expanded(child: _buildBody(l10n)),
               if (!_loading && _error == null) _buildComposer(l10n),
@@ -375,16 +575,26 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       itemBuilder: (_, index) {
         final turn = _visible[index];
         if (turn.speaker == Speaker.ai) return _AiBubble(text: turn.text);
+        // Real backend always sends a `correction` message after a student turn (even
+        // with an empty corrections list) -- show the card (with its now-"Tiếp tục"
+        // footer) once that's arrived, not gated on corrections being non-empty like the
+        // old scripted mock, or there'd be no way to advance on a clean turn.
+        final isLatestStudentTurn =
+            index == _visible.lastIndexWhere((t) => t.speaker == Speaker.student);
+        final showContinue = isLatestStudentTurn &&
+            _recorderState == _RecorderState.idle &&
+            !_sessionEnded;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _StudentBubble(turn: turn),
-            if (turn.corrections.isNotEmpty) ...[
+            if (showContinue) ...[
               const SizedBox(height: 12),
               CorrectionCard(
                 turn: turn,
                 onHearCorrect: () => _toast(l10n.pzSessionNoSampleAudio),
-                onSayAgain: _sayAgain,
+                onContinue: _handleContinue,
+                continueReady: _continueReady,
               ),
             ],
           ],
@@ -405,7 +615,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       );
     }
 
-    final recording = _recorderState == _RecorderState.recording;
+    final recording = _recorderState == _RecorderState.recording && !_muted;
     final processing = _recorderState == _RecorderState.processing;
 
     return Container(
@@ -486,7 +696,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
             pulse: _pulse,
             recording: recording,
             enabled: !processing,
-            onTap: _toggleRecording,
+            onTap: _toggleMute,
           ),
         ],
       ),

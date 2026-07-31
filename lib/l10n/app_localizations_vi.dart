@@ -460,7 +460,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get pzSessionHearCorrect => 'Nghe câu đúng';
 
   @override
-  String get pzSessionSayAgain => 'Nói lại';
+  String get pzSessionContinue => 'Tiếp tục';
 
   @override
   String get pzSessionRecording => 'Đang ghi âm câu trả lời…';

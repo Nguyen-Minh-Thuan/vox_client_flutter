@@ -13,12 +13,22 @@ class CorrectionCard extends StatelessWidget {
     super.key,
     required this.turn,
     required this.onHearCorrect,
-    required this.onSayAgain,
+    required this.onContinue,
+    this.continueReady = true,
   });
 
   final PracticeTurn turn;
   final VoidCallback onHearCorrect;
-  final VoidCallback onSayAgain;
+
+  /// Advances to whatever's next — a follow-up or a new MAIN question alike (gói 11 mục
+  /// 2.2/2.7b, click-to-continue). Replaces the old "Nói lại" action; there is no
+  /// equivalent to redoing a turn in the real protocol.
+  final VoidCallback onContinue;
+
+  /// False while the next prompt is still being resolved server-side (rare — only when
+  /// bậc 4/LLM generation takes a moment, mục 2.6). The footer shows a small spinner
+  /// instead of doing nothing silently on tap.
+  final bool continueReady;
 
   @override
   Widget build(BuildContext context) {
@@ -124,10 +134,11 @@ class CorrectionCard extends StatelessWidget {
                     const VerticalDivider(width: 1, color: Color(0xFFF1F1F1)),
                     Expanded(
                       child: _FooterAction(
-                        icon: Icons.replay,
-                        label: l10n.pzSessionSayAgain,
-                        color: const Color(0xFF555555),
-                        onTap: onSayAgain,
+                        icon: Icons.arrow_forward,
+                        label: l10n.pzSessionContinue,
+                        color: AppColors.indigo,
+                        onTap: onContinue,
+                        loading: !continueReady,
                       ),
                     ),
                   ],
@@ -267,6 +278,7 @@ class _FooterAction extends StatelessWidget {
     required this.label,
     required this.color,
     required this.onTap,
+    this.loading = false,
   });
 
   final IconData icon;
@@ -274,16 +286,28 @@ class _FooterAction extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
+  /// Shows a small spinner instead of [icon] — used while the next prompt is still being
+  /// resolved server-side (mục 2.6/2.7b), so a tap has visible feedback instead of doing
+  /// nothing silently.
+  final bool loading;
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: loading ? null : onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: color),
+            if (loading)
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: color),
+              )
+            else
+              Icon(icon, size: 16, color: color),
             const SizedBox(width: 6),
             Flexible(
               child: Text(

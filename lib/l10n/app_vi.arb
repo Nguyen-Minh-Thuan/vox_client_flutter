@@ -193,7 +193,7 @@
     "placeholders": { "count": { "type": "int" } }
   },
   "pzSessionHearCorrect": "Nghe câu đúng",
-  "pzSessionSayAgain": "Nói lại",
+  "pzSessionContinue": "Tiếp tục",
   "pzSessionRecording": "Đang ghi âm câu trả lời…",
   "pzSessionTapToSpeak": "Bấm mic để trả lời",
   "pzSessionThinking": "Đang nghe bạn nói…",

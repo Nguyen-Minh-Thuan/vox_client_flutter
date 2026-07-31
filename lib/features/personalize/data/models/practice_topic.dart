@@ -41,6 +41,33 @@ class PracticeTopic {
     this.buckets = const {TopicFilter.forYou},
   });
 
+  /// Builds from the real backend shape (`PracticeTopicOffer`/`TopicSearchResult.topics`
+  /// in `practice-planning.graphqls`) — see gói 11 mục 2.6b for the field-by-field mapping.
+  factory PracticeTopic.fromOffer(
+    Map<String, dynamic> json, {
+    TopicFilter bucket = TopicFilter.forYou,
+  }) {
+    final savedByMe = json['savedByMe'] as bool? ?? false;
+    return PracticeTopic(
+      id: json['topicId'] as String,
+      title: json['name'] as String,
+      rationale: json['rationale'] as String?,
+      minutes: (json['minutes'] as num?)?.toInt() ?? 0,
+      level: _levelFromJson(json['level'] as String?),
+      matchPercent: (json['matchPercent'] as num?)?.toInt(),
+      reasons: (json['reasons'] as List<dynamic>? ?? const [])
+          .map((e) => e as String)
+          .toList(),
+      focusTags: (json['focusTags'] as List<dynamic>? ?? const [])
+          .map((e) => e as String)
+          .toList(),
+      buckets: {
+        bucket,
+        if (savedByMe) TopicFilter.saved,
+      },
+    );
+  }
+
   factory PracticeTopic.fromJson(Map<String, dynamic> json) {
     return PracticeTopic(
       id: json['id'] as String,

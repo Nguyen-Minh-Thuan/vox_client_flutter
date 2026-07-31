@@ -944,11 +944,11 @@ abstract class AppLocalizations {
   /// **'Hear it right'**
   String get pzSessionHearCorrect;
 
-  /// No description provided for @pzSessionSayAgain.
+  /// No description provided for @pzSessionContinue.
   ///
   /// In en, this message translates to:
-  /// **'Say it again'**
-  String get pzSessionSayAgain;
+  /// **'Continue'**
+  String get pzSessionContinue;
 
   /// No description provided for @pzSessionRecording.
   ///

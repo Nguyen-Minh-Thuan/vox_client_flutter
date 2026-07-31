@@ -193,7 +193,7 @@
     "placeholders": { "count": { "type": "int" } }
   },
   "pzSessionHearCorrect": "Hear it right",
-  "pzSessionSayAgain": "Say it again",
+  "pzSessionContinue": "Continue",
   "pzSessionRecording": "Recording your answer…",
   "pzSessionTapToSpeak": "Tap the mic to answer",
   "pzSessionThinking": "Listening…",

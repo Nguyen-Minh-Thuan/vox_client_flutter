@@ -460,7 +460,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pzSessionHearCorrect => 'Hear it right';
 
   @override
-  String get pzSessionSayAgain => 'Say it again';
+  String get pzSessionContinue => 'Continue';
 
   @override
   String get pzSessionRecording => 'Recording your answer…';
