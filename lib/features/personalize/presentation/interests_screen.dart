@@ -8,6 +8,9 @@ import '../data/personalize_repository.dart';
 import 'personalize_widgets.dart';
 
 /// Design `1f`, screen 3 — the self-updating interest profile.
+///
+/// Real `myInterestProfile` (`topics` → active/cooling, PENDING
+/// `suggestions` → discovered cards with real `respondToTopicSuggestion`).
 class InterestsScreen extends StatefulWidget {
   const InterestsScreen({super.key});
 
@@ -36,8 +39,12 @@ class _InterestsScreenState extends State<InterestsScreen> {
     });
     try {
       final interests = await _repository.getInterests();
+      final autoUpdate = await _repository.getInterestAutoUpdateEnabled();
       if (!mounted) return;
-      setState(() => _interests = interests);
+      setState(() {
+        _interests = interests;
+        _autoUpdate = autoUpdate;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = '$e');
@@ -46,37 +53,33 @@ class _InterestsScreenState extends State<InterestsScreen> {
     }
   }
 
-  /// Accepts a discovered interest — it moves into the active list.
-  void _acceptDiscovery(Interest interest) {
-    setState(() {
-      _interests = [
-        for (final i in _interests)
-          if (i.id == interest.id)
-            i.copyWith(status: InterestStatus.active)
-          else
-            i,
-      ];
-    });
+  Future<void> _acceptDiscovery(Interest interest) async {
+    setState(() => _interests = _interests.where((i) => i.id != interest.id).toList());
+    try {
+      await _repository.respondToTopicSuggestion(interest.id, true);
+    } catch (_) {
+      if (mounted) _load();
+    }
   }
 
-  /// Rejects a discovered interest — it disappears from the list entirely.
-  void _dismissDiscovery(Interest interest) {
-    setState(() {
-      _interests = _interests.where((i) => i.id != interest.id).toList();
-    });
+  Future<void> _dismissDiscovery(Interest interest) async {
+    setState(() => _interests = _interests.where((i) => i.id != interest.id).toList());
+    try {
+      await _repository.respondToTopicSuggestion(interest.id, false);
+    } catch (_) {
+      if (mounted) _load();
+    }
   }
 
-  /// Keeps a cooling interest alive by promoting it back to active.
-  void _keepCooling(Interest interest) {
-    setState(() {
-      _interests = [
-        for (final i in _interests)
-          if (i.id == interest.id)
-            i.copyWith(status: InterestStatus.active)
-          else
-            i,
-      ];
-    });
+  Future<void> _toggleAutoUpdate(bool value) async {
+    final previous = _autoUpdate;
+    setState(() => _autoUpdate = value);
+    try {
+      final saved = await _repository.setInterestAutoUpdate(value);
+      if (mounted) setState(() => _autoUpdate = saved);
+    } catch (_) {
+      if (mounted) setState(() => _autoUpdate = previous);
+    }
   }
 
   @override
@@ -114,21 +117,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
           const SizedBox(height: 16),
         ],
         if (active.isNotEmpty) ...[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Expanded(child: SectionLabel(l10n.pzInterestsActive)),
-              Text(
-                l10n.pzInterestsEdit,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.indigo,
-                ),
-              ),
-            ],
-          ),
+          SectionLabel(l10n.pzInterestsActive),
           const SizedBox(height: 12),
           for (final interest in active) ...[
             _ActiveRow(interest: interest),
@@ -140,17 +129,14 @@ class _InterestsScreenState extends State<InterestsScreen> {
           SectionLabel(l10n.pzInterestsCooling),
           const SizedBox(height: 10),
           for (final interest in cooling) ...[
-            _CoolingRow(
-              interest: interest,
-              onKeep: () => _keepCooling(interest),
-            ),
+            _CoolingRow(interest: interest),
             const SizedBox(height: 10),
           ],
           const SizedBox(height: 8),
         ],
         _AutoUpdateTile(
           value: _autoUpdate,
-          onChanged: (v) => setState(() => _autoUpdate = v),
+          onChanged: _toggleAutoUpdate,
         ),
         const SizedBox(height: 20),
         Text(
@@ -226,7 +212,7 @@ class _DiscoveryCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            '${interest.emoji} ${interest.label}',
+            interest.label,
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -300,7 +286,6 @@ class _ActiveRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Below this the topic is barely mentioned — render it in a muted indigo.
     final faded = interest.ratio < 0.4;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -309,7 +294,7 @@ class _ActiveRow extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                '${interest.emoji} ${interest.label}',
+                interest.label,
                 style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
@@ -341,14 +326,12 @@ class _ActiveRow extends StatelessWidget {
 }
 
 class _CoolingRow extends StatelessWidget {
-  const _CoolingRow({required this.interest, required this.onKeep});
+  const _CoolingRow({required this.interest});
 
   final Interest interest;
-  final VoidCallback onKeep;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
@@ -359,50 +342,23 @@ class _CoolingRow extends StatelessWidget {
           strokeAlign: BorderSide.strokeAlignInside,
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${interest.emoji} ${interest.label}',
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF666666),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  interest.detail,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: AppColors.textGhost,
-                  ),
-                ),
-              ],
+          Text(
+            interest.label,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF666666),
             ),
           ),
-          const SizedBox(width: 12),
-          Material(
-            color: AppColors.fieldBg,
-            borderRadius: BorderRadius.circular(99),
-            child: InkWell(
-              onTap: onKeep,
-              borderRadius: BorderRadius.circular(99),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-                child: Text(
-                  l10n.pzInterestsKeep,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.chipNeutralFg,
-                  ),
-                ),
-              ),
+          const SizedBox(height: 3),
+          Text(
+            interest.detail,
+            style: const TextStyle(
+              fontSize: 11.5,
+              color: AppColors.textGhost,
             ),
           ),
         ],

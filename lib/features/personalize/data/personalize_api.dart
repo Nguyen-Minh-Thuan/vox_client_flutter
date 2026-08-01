@@ -220,4 +220,217 @@ class PersonalizeApi {
 
     return data['endPracticeSession'] as Map<String, dynamic>;
   }
+
+  /// Maps to `myLearnerProfile { goalType }` — current EXAM_PREP/ABILITY_IMPROVEMENT goal.
+  Future<String?> getPracticeGoal() async {
+    final data = await _client.query('''
+      query MyLearnerProfile {
+        myLearnerProfile {
+          goalType
+        }
+      }
+    ''');
+
+    final profile = data['myLearnerProfile'] as Map<String, dynamic>?;
+    return profile?['goalType'] as String?;
+  }
+
+  /// Maps to `setPracticeGoal(goalType)` — goalType is `EXAM_PREP` or `ABILITY_IMPROVEMENT`.
+  Future<String> setPracticeGoal(String goalType) async {
+    final data = await _client.query('''
+      mutation SetPracticeGoal(\$goalType: PracticeGoalType!) {
+        setPracticeGoal(goalType: \$goalType) {
+          goalType
+        }
+      }
+    ''', variables: {'goalType': goalType});
+
+    final profile = data['setPracticeGoal'] as Map<String, dynamic>;
+    return profile['goalType'] as String;
+  }
+
+  /// Maps to `interestQuizItems` — forced-choice triplets for the cold-start
+  /// interest inventory (AI-generated, diversified per student).
+  Future<List<Map<String, dynamic>>> getInterestQuizItems() async {
+    final data = await _client.query('''
+      query InterestQuizItems {
+        interestQuizItems {
+          id
+          statements
+        }
+      }
+    ''');
+
+    final items = data['interestQuizItems'] as List;
+    return items.cast<Map<String, dynamic>>();
+  }
+
+  /// Maps to `submitInterestQuiz(input)` — scores the answers into the
+  /// student's dimension_interest_score vector server-side.
+  Future<Map<String, dynamic>> submitInterestQuiz(
+    List<Map<String, dynamic>> answers,
+  ) async {
+    final data = await _client.query('''
+      mutation SubmitInterestQuiz(\$answers: [InterestQuizAnswerInput!]!) {
+        submitInterestQuiz(input: {answers: \$answers}) {
+          goalType
+          quizCompletedAt
+        }
+      }
+    ''', variables: {'answers': answers});
+
+    return data['submitInterestQuiz'] as Map<String, dynamic>;
+  }
+
+  /// Maps to `saveTopic(topicId)`.
+  Future<void> saveTopic(String topicId) async {
+    await _client.query('''
+      mutation SaveTopic(\$topicId: ID!) {
+        saveTopic(topicId: \$topicId)
+      }
+    ''', variables: {'topicId': topicId});
+  }
+
+  /// Maps to `unsaveTopic(topicId)`.
+  Future<void> unsaveTopic(String topicId) async {
+    await _client.query('''
+      mutation UnsaveTopic(\$topicId: ID!) {
+        unsaveTopic(topicId: \$topicId)
+      }
+    ''', variables: {'topicId': topicId});
+  }
+
+  /// Maps to `pickRandomTopic`.
+  Future<Map<String, dynamic>> pickRandomTopic() async {
+    final data = await _client.query('''
+      mutation PickRandomTopic {
+        pickRandomTopic {
+          $_offerFields
+        }
+      }
+    ''');
+
+    return data['pickRandomTopic'] as Map<String, dynamic>;
+  }
+
+  /// Maps to `submitFlsaSelfReport(answers)` — exactly 3-4 Likert(1-5) answers.
+  Future<Map<String, dynamic>> submitFlsaSelfReport(List<int> answers) async {
+    final data = await _client.query('''
+      mutation SubmitFlsaSelfReport(\$answers: [Int!]!) {
+        submitFlsaSelfReport(answers: \$answers) {
+          flsaScore
+        }
+      }
+    ''', variables: {'answers': answers});
+
+    return data['submitFlsaSelfReport'] as Map<String, dynamic>;
+  }
+
+  /// Maps to `myWeaknessProfile`.
+  Future<Map<String, dynamic>> getWeaknessProfile() async {
+    final data = await _client.query('''
+      query MyWeaknessProfile {
+        myWeaknessProfile {
+          sessionsAnalysed
+          nearlyFixed
+          newlyFound
+          criteria {
+            criterionCode
+            criterionName
+            weakness
+            observationCount
+            reliable
+          }
+          subAttributes {
+            criterionCode
+            subAttribute
+            occurrenceCount
+            severity
+            practiceable
+          }
+        }
+      }
+    ''');
+
+    return data['myWeaknessProfile'] as Map<String, dynamic>;
+  }
+
+  /// Maps to `myPracticeHistory(limit)`.
+  Future<List<Map<String, dynamic>>> getPracticeHistory(int limit) async {
+    final data = await _client.query('''
+      query MyPracticeHistory(\$limit: Int) {
+        myPracticeHistory(limit: \$limit) {
+          $_sessionFields
+        }
+      }
+    ''', variables: {'limit': limit});
+
+    final sessions = data['myPracticeHistory'] as List;
+    return sessions.cast<Map<String, dynamic>>();
+  }
+
+  /// Maps to `myInterestProfile` — `topics` (real score/sessionsMentioned/lastMentionedAt)
+  /// plus `suggestions` (AI-suggested topics, status PENDING become the "discovered" cards).
+  Future<Map<String, dynamic>> getInterestProfile() async {
+    final data = await _client.query('''
+      query MyInterestProfile {
+        myInterestProfile {
+          topics {
+            topicId
+            name
+            score
+            sessionsMentioned
+            lastMentionedAt
+          }
+          suggestions {
+            id
+            suggestedTopicName
+            interestDimension
+            confidence
+            reasonText
+            status
+          }
+        }
+      }
+    ''');
+
+    return data['myInterestProfile'] as Map<String, dynamic>;
+  }
+
+  /// Maps to `respondToTopicSuggestion(suggestionId, accept)`.
+  Future<void> respondToTopicSuggestion(String suggestionId, bool accept) async {
+    await _client.query('''
+      mutation RespondToTopicSuggestion(\$suggestionId: ID!, \$accept: Boolean!) {
+        respondToTopicSuggestion(suggestionId: \$suggestionId, accept: \$accept)
+      }
+    ''', variables: {'suggestionId': suggestionId, 'accept': accept});
+  }
+
+  /// Maps to `setInterestAutoUpdate(enabled)`.
+  Future<bool> setInterestAutoUpdate(bool enabled) async {
+    final data = await _client.query('''
+      mutation SetInterestAutoUpdate(\$enabled: Boolean!) {
+        setInterestAutoUpdate(enabled: \$enabled) {
+          interestAutoUpdateEnabled
+        }
+      }
+    ''', variables: {'enabled': enabled});
+
+    final profile = data['setInterestAutoUpdate'] as Map<String, dynamic>;
+    return profile['interestAutoUpdateEnabled'] as bool;
+  }
+
+  /// Maps to `myLearnerProfile { interestAutoUpdateEnabled }`.
+  Future<bool> getInterestAutoUpdateEnabled() async {
+    final data = await _client.query('''
+      query MyLearnerProfileAutoUpdate {
+        myLearnerProfile {
+          interestAutoUpdateEnabled
+        }
+      }
+    ''');
+
+    final profile = data['myLearnerProfile'] as Map<String, dynamic>?;
+    return profile?['interestAutoUpdateEnabled'] as bool? ?? true;
+  }
 }

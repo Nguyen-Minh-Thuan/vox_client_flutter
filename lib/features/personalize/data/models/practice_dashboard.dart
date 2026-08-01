@@ -2,19 +2,27 @@ import 'practice_topic.dart';
 import 'weakness.dart';
 
 /// Everything the "Luyện nói" home tab renders in one shot.
+///
+/// No single GraphQL query returns this shape -- it's assembled in
+/// `PersonalizeRepository.getDashboard()` from `myPracticeDashboardStats`,
+/// `practiceTopicOffers`, `myWeaknessProfile` and the profile query, each a
+/// real call.
 class PracticeDashboard {
   final String learnerName;
   final int streakDays;
 
-  /// The session proposed for today.
-  final PracticeTopic todayTopic;
+  /// The top-ranked suggestion, also offered as today's session. Null when
+  /// there are no offers yet (brand new student).
+  final PracticeTopic? todayTopic;
   final int sessionsDone;
   final double averageScore;
-  final int weeklyGoalDone;
-  final int weeklyGoalTarget;
 
-  /// "TẬP TRUNG TUẦN NÀY" rows.
-  final List<Weakness> weeklyFocus;
+  /// Real count of sessions started this calendar week (`myPracticeHistory`).
+  /// No "/N" target shown -- the backend has no concept of a weekly goal.
+  final int sessionsThisWeek;
+
+  /// "TẬP TRUNG TUẦN NÀY" rows -- top weakest real criteria.
+  final List<CriterionWeaknessRow> weeklyFocus;
 
   /// "GỢI Ý CHO BẠN" cards.
   final List<PracticeTopic> suggestions;
@@ -22,32 +30,11 @@ class PracticeDashboard {
   const PracticeDashboard({
     required this.learnerName,
     required this.streakDays,
-    required this.todayTopic,
+    this.todayTopic,
     required this.sessionsDone,
     required this.averageScore,
-    required this.weeklyGoalDone,
-    required this.weeklyGoalTarget,
+    required this.sessionsThisWeek,
     this.weeklyFocus = const [],
     this.suggestions = const [],
   });
-
-  factory PracticeDashboard.fromJson(Map<String, dynamic> json) {
-    return PracticeDashboard(
-      learnerName: json['learnerName'] as String? ?? '',
-      streakDays: (json['streakDays'] as num?)?.toInt() ?? 0,
-      todayTopic: PracticeTopic.fromJson(
-        json['todayTopic'] as Map<String, dynamic>,
-      ),
-      sessionsDone: (json['sessionsDone'] as num?)?.toInt() ?? 0,
-      averageScore: (json['averageScore'] as num?)?.toDouble() ?? 0,
-      weeklyGoalDone: (json['weeklyGoalDone'] as num?)?.toInt() ?? 0,
-      weeklyGoalTarget: (json['weeklyGoalTarget'] as num?)?.toInt() ?? 0,
-      weeklyFocus: (json['weeklyFocus'] as List<dynamic>? ?? const [])
-          .map((e) => Weakness.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      suggestions: (json['suggestions'] as List<dynamic>? ?? const [])
-          .map((e) => PracticeTopic.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
-  }
 }

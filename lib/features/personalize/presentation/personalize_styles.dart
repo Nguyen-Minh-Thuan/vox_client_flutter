@@ -100,10 +100,8 @@ CorrectionStyle styleForCorrection(CorrectionType type) {
   switch (severity) {
     case WeaknessSeverity.severe:
       return (bg: AppColors.dangerBg, fg: AppColors.danger);
-    case WeaknessSeverity.isNew:
+    case WeaknessSeverity.medium:
       return (bg: AppColors.chipOrangeBg, fg: AppColors.chipOrangeFg);
-    case WeaknessSeverity.improving:
-      return (bg: AppColors.chipGreenBg, fg: AppColors.chipGreenFg);
     case WeaknessSeverity.mild:
       return (bg: AppColors.chipNeutralBg, fg: AppColors.chipNeutralFg);
   }
@@ -113,24 +111,20 @@ String severityLabel(AppLocalizations l10n, WeaknessSeverity severity) {
   switch (severity) {
     case WeaknessSeverity.severe:
       return l10n.pzWeaknessSevere;
-    case WeaknessSeverity.isNew:
-      return l10n.pzWeaknessNew;
-    case WeaknessSeverity.improving:
-      return l10n.pzWeaknessImproving;
+    case WeaknessSeverity.medium:
+      return l10n.pzWeaknessMedium;
     case WeaknessSeverity.mild:
       return l10n.pzWeaknessMild;
   }
 }
 
-/// Bar colour for a weakness meter — red when severe, green when improving.
+/// Bar colour for a weakness meter — red when severe, muted when mild.
 Color severityBarColor(WeaknessSeverity severity) {
   switch (severity) {
     case WeaknessSeverity.severe:
       return AppColors.danger;
-    case WeaknessSeverity.isNew:
+    case WeaknessSeverity.medium:
       return AppColors.warning;
-    case WeaknessSeverity.improving:
-      return AppColors.success;
     case WeaknessSeverity.mild:
       return AppColors.muted;
   }

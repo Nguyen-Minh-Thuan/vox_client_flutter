@@ -87,11 +87,14 @@ class _PracticeHomeScreenState extends State<PracticeHomeScreen> {
                 child: ListView(
                   padding: pagePadding,
                   children: [
-                    _TodaySessionCard(
-                      topic: data.todayTopic,
-                      onStart: () => _openSession(data.todayTopic),
-                      onChangeTopic: _openTopics,
-                    ),
+                    if (data.todayTopic != null)
+                      _TodaySessionCard(
+                        topic: data.todayTopic!,
+                        onStart: () => _openSession(data.todayTopic!),
+                        onChangeTopic: _openTopics,
+                      )
+                    else
+                      _NoTopicYetCard(onBrowse: _openTopics),
                     const SizedBox(height: 12),
                     _StatRow(dashboard: data),
                     const SizedBox(height: 22),
@@ -197,6 +200,46 @@ class _Header extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown instead of `_TodaySessionCard` when `practiceTopicOffers` has
+/// nothing yet (brand new student, no interest signal to rank on).
+class _NoTopicYetCard extends StatelessWidget {
+  const _NoTopicYetCard({required this.onBrowse});
+  final VoidCallback onBrowse;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.ink,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              l10n.pzHomeNoTopicYet,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onBrowse,
+            child: Text(
+              l10n.pzSeeAll,
+              style: const TextStyle(color: AppColors.secondary),
             ),
           ),
         ],
@@ -406,7 +449,7 @@ class _StatRow extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: StatBox(
-            value: '${dashboard.weeklyGoalDone}/${dashboard.weeklyGoalTarget}',
+            value: '${dashboard.sessionsThisWeek}',
             caption: l10n.pzHomeStatWeeklyGoal,
           ),
         ),
@@ -455,7 +498,7 @@ class _SectionHeader extends StatelessWidget {
 /// One "TẬP TRUNG TUẦN NÀY" row.
 class _FocusRow extends StatelessWidget {
   const _FocusRow({required this.weakness});
-  final Weakness weakness;
+  final CriterionWeaknessRow weakness;
 
   @override
   Widget build(BuildContext context) {
@@ -473,9 +516,7 @@ class _FocusRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(11),
             ),
             child: Icon(
-              weakness.category == WeaknessCategory.pronunciation
-                  ? Icons.graphic_eq
-                  : Icons.history_edu,
+              Icons.history_edu,
               size: 19,
               color: colors.fg,
             ),
@@ -486,7 +527,7 @@ class _FocusRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  weakness.title,
+                  weakness.criterionName,
                   style: const TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
@@ -501,17 +542,6 @@ class _FocusRow extends StatelessWidget {
                   track: AppColors.borderSoft,
                 ),
               ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            weakness.deltaLabel,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: weakness.deltaIsPositive
-                  ? AppColors.chipGreenFg
-                  : AppColors.chipOrangeFg,
             ),
           ),
         ],

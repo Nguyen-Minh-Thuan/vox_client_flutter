@@ -821,8 +821,14 @@ abstract class AppLocalizations {
   /// No description provided for @pzHomeStatWeeklyGoal.
   ///
   /// In en, this message translates to:
-  /// **'Weekly goal'**
+  /// **'Sessions this week'**
   String get pzHomeStatWeeklyGoal;
+
+  /// No description provided for @pzHomeNoTopicYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No suggestions yet — pick a topic to get started'**
+  String get pzHomeNoTopicYet;
 
   /// No description provided for @pzHomeWeeklyFocus.
   ///
@@ -877,6 +883,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Saved'**
   String get pzTopicsFilterSaved;
+
+  /// No description provided for @pzTopicsRandom.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a random topic'**
+  String get pzTopicsRandom;
+
+  /// No description provided for @pzTopicsSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save topic'**
+  String get pzTopicsSave;
+
+  /// No description provided for @pzTopicsUnsave.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsave'**
+  String get pzTopicsUnsave;
 
   /// No description provided for @pzTopicsPriority.
   ///
@@ -1031,13 +1055,13 @@ abstract class AppLocalizations {
   /// No description provided for @pzSessionEndedQuotaExceeded.
   ///
   /// In en, this message translates to:
-  /// **'You've used up your practice quota. The session has ended.'**
+  /// **'You\'ve used up your practice quota. The session has ended.'**
   String get pzSessionEndedQuotaExceeded;
 
   /// No description provided for @pzSessionReconnectFailed.
   ///
   /// In en, this message translates to:
-  /// **'Connection lost and couldn't be restored. The session has ended.'**
+  /// **'Connection lost and couldn\'t be restored. The session has ended.'**
   String get pzSessionReconnectFailed;
 
   /// No description provided for @pzSummaryTitle.
@@ -1148,23 +1172,41 @@ abstract class AppLocalizations {
   /// **'SEVERE'**
   String get pzWeaknessSevere;
 
-  /// No description provided for @pzWeaknessNew.
+  /// No description provided for @pzWeaknessMedium.
   ///
   /// In en, this message translates to:
-  /// **'NEW'**
-  String get pzWeaknessNew;
-
-  /// No description provided for @pzWeaknessImproving.
-  ///
-  /// In en, this message translates to:
-  /// **'IMPROVING'**
-  String get pzWeaknessImproving;
+  /// **'MODERATE'**
+  String get pzWeaknessMedium;
 
   /// No description provided for @pzWeaknessMild.
   ///
   /// In en, this message translates to:
   /// **'MILD'**
   String get pzWeaknessMild;
+
+  /// No description provided for @pzHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice history'**
+  String get pzHistoryTitle;
+
+  /// No description provided for @pzHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No practice sessions yet'**
+  String get pzHistoryEmpty;
+
+  /// No description provided for @pzWeaknessObservations.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} observations'**
+  String pzWeaknessObservations(int count);
+
+  /// No description provided for @pzWeaknessOccurrences.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} occurrences'**
+  String pzWeaknessOccurrences(int count);
 
   /// No description provided for @pzWeaknessBuildSession.
   ///
@@ -1411,6 +1453,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Redo speaking onboarding'**
   String get pzOnboardingRestart;
+
+  /// No description provided for @pzGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice goal'**
+  String get pzGoalTitle;
+
+  /// No description provided for @pzGoalExamPrep.
+  ///
+  /// In en, this message translates to:
+  /// **'Exam prep'**
+  String get pzGoalExamPrep;
+
+  /// No description provided for @pzGoalAbilityImprovement.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill building'**
+  String get pzGoalAbilityImprovement;
+
+  /// No description provided for @pzGoalUpdateError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update your practice goal, please try again'**
+  String get pzGoalUpdateError;
+
+  /// No description provided for @pzInterestQuizTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover your interests'**
+  String get pzInterestQuizTitle;
+
+  /// No description provided for @pzInterestQuizHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Of these 3 things…'**
+  String get pzInterestQuizHeading;
+
+  /// No description provided for @pzInterestQuizBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the one most like you and the one least like you. No right answer.'**
+  String get pzInterestQuizBody;
+
+  /// No description provided for @pzInterestQuizMostLike.
+  ///
+  /// In en, this message translates to:
+  /// **'Most like me'**
+  String get pzInterestQuizMostLike;
+
+  /// No description provided for @pzInterestQuizLeastLike.
+  ///
+  /// In en, this message translates to:
+  /// **'Least like me'**
+  String get pzInterestQuizLeastLike;
+
+  /// No description provided for @pzInterestQuizSubmitError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t submit your answers, please try again'**
+  String get pzInterestQuizSubmitError;
 }
 
 class _AppLocalizationsDelegate

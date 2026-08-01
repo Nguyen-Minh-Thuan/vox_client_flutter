@@ -388,7 +388,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get pzHomeStatAverage => 'Điểm TB';
 
   @override
-  String get pzHomeStatWeeklyGoal => 'Mục tiêu tuần';
+  String get pzHomeStatWeeklyGoal => 'Buổi tuần này';
+
+  @override
+  String get pzHomeNoTopicYet =>
+      'Chưa có gợi ý nào — chọn 1 chủ đề để bắt đầu nhé';
 
   @override
   String get pzHomeWeeklyFocus => 'Tập trung tuần này';
@@ -416,6 +420,15 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pzTopicsFilterSaved => 'Đã lưu';
+
+  @override
+  String get pzTopicsRandom => 'Chọn ngẫu nhiên';
+
+  @override
+  String get pzTopicsSave => 'Lưu chủ đề';
+
+  @override
+  String get pzTopicsUnsave => 'Bỏ lưu';
 
   @override
   String get pzTopicsPriority => 'ƯU TIÊN #1';
@@ -575,13 +588,26 @@ class AppLocalizationsVi extends AppLocalizations {
   String get pzWeaknessSevere => 'NẶNG';
 
   @override
-  String get pzWeaknessNew => 'MỚI';
-
-  @override
-  String get pzWeaknessImproving => 'ĐANG TỐT LÊN';
+  String get pzWeaknessMedium => 'VỪA';
 
   @override
   String get pzWeaknessMild => 'NHẸ';
+
+  @override
+  String get pzHistoryTitle => 'Lịch sử luyện tập';
+
+  @override
+  String get pzHistoryEmpty => 'Chưa có phiên luyện tập nào';
+
+  @override
+  String pzWeaknessObservations(int count) {
+    return '$count lần quan sát';
+  }
+
+  @override
+  String pzWeaknessOccurrences(int count) {
+    return '$count lần lặp lại';
+  }
 
   @override
   String get pzWeaknessBuildSession => 'Tạo buổi luyện từ 3 điểm yếu đầu';
@@ -717,4 +743,37 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pzOnboardingRestart => 'Làm lại onboarding luyện nói';
+
+  @override
+  String get pzGoalTitle => 'Mục tiêu luyện tập';
+
+  @override
+  String get pzGoalExamPrep => 'Luyện thi';
+
+  @override
+  String get pzGoalAbilityImprovement => 'Tăng kỹ năng';
+
+  @override
+  String get pzGoalUpdateError =>
+      'Không thể đổi mục tiêu luyện tập, thử lại nhé';
+
+  @override
+  String get pzInterestQuizTitle => 'Khám phá sở thích của bạn';
+
+  @override
+  String get pzInterestQuizHeading => 'Trong 3 việc dưới đây…';
+
+  @override
+  String get pzInterestQuizBody =>
+      'Chọn việc giống mình nhất và việc ít giống mình nhất. Không có đáp án đúng.';
+
+  @override
+  String get pzInterestQuizMostLike => 'Giống mình nhất';
+
+  @override
+  String get pzInterestQuizLeastLike => 'Ít giống mình nhất';
+
+  @override
+  String get pzInterestQuizSubmitError =>
+      'Không gửi được câu trả lời, thử lại nhé';
 }

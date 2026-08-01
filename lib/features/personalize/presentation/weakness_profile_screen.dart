@@ -3,14 +3,19 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../app/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../data/models/practice_topic.dart';
 import '../data/models/weakness.dart';
-import '../data/personalize_demo_data.dart';
 import '../data/personalize_repository.dart';
 import 'personalize_styles.dart';
 import 'personalize_widgets.dart';
+import 'practice_topics_screen.dart';
 import 'practice_session_screen.dart';
 
 /// Design `1f`, screen 2 — the tracked error profile.
+///
+/// Real `myWeaknessProfile` — grouped by whatever criteria the school's
+/// rubric actually configures (NOT a fixed grammar/pronunciation/expression
+/// 3-way split, since real rubric criteria are a school-configurable list).
 class WeaknessProfileScreen extends StatefulWidget {
   const WeaknessProfileScreen({super.key});
 
@@ -48,14 +53,17 @@ class _WeaknessProfileScreenState extends State<WeaknessProfileScreen> {
     }
   }
 
-  /// Builds a drill session around the learner's worst weak spots.
-  void _buildSession() {
-    Navigator.of(context).push(
+  /// Opens the topic list pre-filtered to weakest-first — same session-start
+  /// flow as everywhere else, no hardcoded demo topic.
+  void _buildSession() async {
+    final topic = await Navigator.of(context).push<PracticeTopic>(
       MaterialPageRoute(
-        builder: (_) => const PracticeSessionScreen(
-          topic: PersonalizeDemoData.topFootballTopic,
-        ),
+        builder: (_) => const PracticeTopicsScreen(initialFilter: TopicFilter.byWeakness),
       ),
+    );
+    if (topic == null || !mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PracticeSessionScreen(topic: topic)),
     );
   }
 
@@ -63,17 +71,7 @@ class _WeaknessProfileScreenState extends State<WeaknessProfileScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.pzWeaknessTitle),
-        actions: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: TagChip(l10n.pzWeaknessRange),
-            ),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(l10n.pzWeaknessTitle)),
       body: switch ((_loading, _error, _profile)) {
         (true, _, _) => const Center(child: CircularProgressIndicator()),
         (_, final String error, _) =>
@@ -85,12 +83,6 @@ class _WeaknessProfileScreenState extends State<WeaknessProfileScreen> {
   }
 
   Widget _buildBody(AppLocalizations l10n, WeaknessProfile profile) {
-    final sections = <(String, WeaknessCategory)>[
-      (l10n.pzWeaknessGrammar, WeaknessCategory.grammar),
-      (l10n.pzWeaknessPronunciation, WeaknessCategory.pronunciation),
-      (l10n.pzWeaknessExpression, WeaknessCategory.expression),
-    ];
-
     return Column(
       children: [
         Expanded(
@@ -98,15 +90,24 @@ class _WeaknessProfileScreenState extends State<WeaknessProfileScreen> {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
             children: [
               _SummaryCard(profile: profile),
-              for (final (label, category) in sections) ...[
-                if (profile.byCategory(category).isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  SectionLabel(label),
-                  const SizedBox(height: 10),
-                  for (final weakness in profile.byCategory(category)) ...[
-                    _WeaknessCard(weakness: weakness),
-                    const SizedBox(height: 8),
-                  ],
+              for (final criterion in profile.criteria) ...[
+                const SizedBox(height: 20),
+                SectionLabel(criterion.criterionName),
+                const SizedBox(height: 10),
+                _WeaknessRow(
+                  title: criterion.criterionName,
+                  severity: criterion.severity,
+                  ratio: criterion.ratio,
+                  detail: l10n.pzWeaknessObservations(criterion.observationCount),
+                ),
+                for (final sub in profile.subAttributesFor(criterion.criterionCode)) ...[
+                  const SizedBox(height: 8),
+                  _WeaknessRow(
+                    title: sub.subAttribute,
+                    severity: sub.severity,
+                    ratio: sub.ratio,
+                    detail: l10n.pzWeaknessOccurrences(sub.occurrenceCount),
+                  ),
                 ],
               ],
             ],
@@ -138,7 +139,10 @@ class _WeaknessProfileScreenState extends State<WeaknessProfileScreen> {
   }
 }
 
-/// The black counters card.
+/// The black counters card — all 3 numbers real (`sessionsAnalysed` counts
+/// distinct graded evaluations in the observation window; `nearlyFixed`/
+/// `newlyFound` come from comparing the real long-window vs recent-window
+/// frequency the backend already tracks per sub-attribute).
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({required this.profile});
   final WeaknessProfile profile;
@@ -233,14 +237,25 @@ class _Counter extends StatelessWidget {
   }
 }
 
-class _WeaknessCard extends StatelessWidget {
-  const _WeaknessCard({required this.weakness});
-  final Weakness weakness;
+/// One weakness row — used for both criterion-level and sub-attribute-level
+/// entries, since both share the same real shape (title/severity/ratio/detail).
+class _WeaknessRow extends StatelessWidget {
+  const _WeaknessRow({
+    required this.title,
+    required this.severity,
+    required this.ratio,
+    required this.detail,
+  });
+
+  final String title;
+  final WeaknessSeverity severity;
+  final double ratio;
+  final String detail;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final colors = severityColors(weakness.severity);
+    final colors = severityColors(severity);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
@@ -252,7 +267,7 @@ class _WeaknessCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  weakness.title,
+                  title,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -262,7 +277,7 @@ class _WeaknessCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               TagChip(
-                severityLabel(l10n, weakness.severity),
+                severityLabel(l10n, severity),
                 bg: colors.bg,
                 fg: colors.fg,
               ),
@@ -270,38 +285,15 @@ class _WeaknessCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            weakness.detail,
+            detail,
             style: const TextStyle(fontSize: 11.5, color: AppColors.textFaint),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: MeterBar(
-                  ratio: weakness.ratio,
-                  color: severityBarColor(weakness.severity),
-                  height: 6,
-                  track: AppColors.borderSoft,
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 44,
-                child: Text(
-                  weakness.deltaLabel.isEmpty ? '—' : weakness.deltaLabel,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: weakness.deltaLabel.isEmpty
-                        ? AppColors.textFaint
-                        : (weakness.deltaIsPositive
-                            ? AppColors.chipGreenFg
-                            : AppColors.danger),
-                  ),
-                ),
-              ),
-            ],
+          MeterBar(
+            ratio: ratio,
+            color: severityBarColor(severity),
+            height: 6,
+            track: AppColors.borderSoft,
           ),
         ],
       ),

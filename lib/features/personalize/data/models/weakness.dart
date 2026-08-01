@@ -1,106 +1,126 @@
-/// Section a weakness is filed under on the profile screen.
-enum WeaknessCategory { grammar, pronunciation, expression }
+/// Badge shown on a weakness row — maps 1:1 to the real `severity` string
+/// backend already computes for sub-attributes (`NANG`/`VUA`/`NHE`); for
+/// criterion-level rows there's no such field, so it's derived from the real
+/// `weakness` score via fixed thresholds (a real number bucketed, not a made
+/// up value).
+enum WeaknessSeverity { severe, medium, mild }
 
-/// Badge shown on a weakness card.
-enum WeaknessSeverity { severe, isNew, improving, mild }
-
-/// One tracked weakness in the learner's error profile.
-class Weakness {
-  final String id;
-  final WeaknessCategory category;
-  final String title;
-  final WeaknessSeverity severity;
-
-  /// Sub-caption, e.g. "9 lần · trong 5/8 buổi gần đây".
-  final String detail;
-
-  /// Meter fill, 0..1.
-  final double ratio;
-
-  /// Right-hand delta caption, e.g. "↑ 12%". Empty renders an em dash.
-  final String deltaLabel;
-
-  /// `true` when [deltaLabel] is good news (green) rather than bad (red).
-  final bool deltaIsPositive;
-
-  const Weakness({
-    required this.id,
-    required this.category,
-    required this.title,
-    required this.severity,
-    required this.detail,
-    required this.ratio,
-    this.deltaLabel = '',
-    this.deltaIsPositive = false,
-  });
-
-  factory Weakness.fromJson(Map<String, dynamic> json) {
-    return Weakness(
-      id: json['id'] as String,
-      category: _categoryFromJson(json['category'] as String?),
-      title: json['title'] as String,
-      severity: _severityFromJson(json['severity'] as String?),
-      detail: json['detail'] as String? ?? '',
-      ratio: (json['ratio'] as num?)?.toDouble() ?? 0,
-      deltaLabel: json['deltaLabel'] as String? ?? '',
-      deltaIsPositive: json['deltaIsPositive'] as bool? ?? false,
-    );
-  }
-
-  static WeaknessCategory _categoryFromJson(String? value) {
-    switch (value) {
-      case 'PRONUNCIATION':
-        return WeaknessCategory.pronunciation;
-      case 'EXPRESSION':
-        return WeaknessCategory.expression;
-      case 'GRAMMAR':
-      default:
-        return WeaknessCategory.grammar;
-    }
-  }
-
-  static WeaknessSeverity _severityFromJson(String? value) {
-    switch (value) {
-      case 'NEW':
-        return WeaknessSeverity.isNew;
-      case 'IMPROVING':
-        return WeaknessSeverity.improving;
-      case 'MILD':
-        return WeaknessSeverity.mild;
-      case 'SEVERE':
-      default:
-        return WeaknessSeverity.severe;
-    }
+WeaknessSeverity _severityFromCode(String? value) {
+  switch (value) {
+    case 'NANG':
+      return WeaknessSeverity.severe;
+    case 'NHE':
+      return WeaknessSeverity.mild;
+    case 'VUA':
+    default:
+      return WeaknessSeverity.medium;
   }
 }
 
-/// The header counters on the weakness-profile screen.
+/// One row from `WeaknessProfile.criteria` — a whole rubric criterion
+/// (e.g. "Coherence", "Grammar"), configured per school/framework, NOT a
+/// fixed 3-way grammar/pronunciation/expression split.
+class CriterionWeaknessRow {
+  final String criterionCode;
+  final String criterionName;
+
+  /// Real, centered relative score from `learner_weakness_snapshot.weakness`
+  /// (roughly -1..1, higher = weaker than average). NOT a 0..1 ratio itself.
+  final double weakness;
+  final int observationCount;
+  final bool reliable;
+
+  const CriterionWeaknessRow({
+    required this.criterionCode,
+    required this.criterionName,
+    required this.weakness,
+    required this.observationCount,
+    required this.reliable,
+  });
+
+  /// Meter-bar fill, derived from the real (roughly -1..1) [weakness] score.
+  double get ratio => ((weakness + 1) / 2).clamp(0.0, 1.0);
+
+  WeaknessSeverity get severity =>
+      weakness > 0.3 ? WeaknessSeverity.severe : (weakness > 0 ? WeaknessSeverity.medium : WeaknessSeverity.mild);
+
+  factory CriterionWeaknessRow.fromJson(Map<String, dynamic> json) {
+    return CriterionWeaknessRow(
+      criterionCode: json['criterionCode'] as String,
+      criterionName: json['criterionName'] as String,
+      weakness: (json['weakness'] as num?)?.toDouble() ?? 0,
+      observationCount: (json['observationCount'] as num?)?.toInt() ?? 0,
+      reliable: json['reliable'] as bool? ?? false,
+    );
+  }
+}
+
+/// One row from `WeaknessProfile.subAttributes` — a finer-grained recurring
+/// issue within a criterion (e.g. "past tense" under Grammar).
+class SubAttributeWeaknessRow {
+  final String criterionCode;
+  final String subAttribute;
+  final int occurrenceCount;
+  final WeaknessSeverity severity;
+  final bool practiceable;
+
+  const SubAttributeWeaknessRow({
+    required this.criterionCode,
+    required this.subAttribute,
+    required this.occurrenceCount,
+    required this.severity,
+    required this.practiceable,
+  });
+
+  /// Meter-bar fill derived from the real occurrence count (normalized
+  /// against 5 -- same scale convention used elsewhere in this app for
+  /// "bank availability" style ratios).
+  double get ratio => (occurrenceCount / 5.0).clamp(0.0, 1.0);
+
+  factory SubAttributeWeaknessRow.fromJson(Map<String, dynamic> json) {
+    return SubAttributeWeaknessRow(
+      criterionCode: json['criterionCode'] as String,
+      subAttribute: json['subAttribute'] as String,
+      occurrenceCount: (json['occurrenceCount'] as num?)?.toInt() ?? 0,
+      severity: _severityFromCode(json['severity'] as String?),
+      practiceable: json['practiceable'] as bool? ?? false,
+    );
+  }
+}
+
+/// `myWeaknessProfile` — every field here is either a real backend value or
+/// a documented derivation of one; no fabricated counters (the old mock's
+/// per-card trend arrow had no real source and was dropped).
 class WeaknessProfile {
   final int sessionsAnalysed;
-  final int tracked;
   final int nearlyFixed;
   final int newlyFound;
-  final List<Weakness> weaknesses;
+  final List<CriterionWeaknessRow> criteria;
+  final List<SubAttributeWeaknessRow> subAttributes;
 
   const WeaknessProfile({
     required this.sessionsAnalysed,
-    required this.tracked,
     required this.nearlyFixed,
     required this.newlyFound,
-    this.weaknesses = const [],
+    this.criteria = const [],
+    this.subAttributes = const [],
   });
 
-  List<Weakness> byCategory(WeaknessCategory category) =>
-      weaknesses.where((w) => w.category == category).toList();
+  int get tracked => subAttributes.length;
+
+  List<SubAttributeWeaknessRow> subAttributesFor(String criterionCode) =>
+      subAttributes.where((row) => row.criterionCode == criterionCode).toList();
 
   factory WeaknessProfile.fromJson(Map<String, dynamic> json) {
     return WeaknessProfile(
       sessionsAnalysed: (json['sessionsAnalysed'] as num?)?.toInt() ?? 0,
-      tracked: (json['tracked'] as num?)?.toInt() ?? 0,
       nearlyFixed: (json['nearlyFixed'] as num?)?.toInt() ?? 0,
       newlyFound: (json['newlyFound'] as num?)?.toInt() ?? 0,
-      weaknesses: (json['weaknesses'] as List<dynamic>? ?? const [])
-          .map((e) => Weakness.fromJson(e as Map<String, dynamic>))
+      criteria: (json['criteria'] as List<dynamic>? ?? const [])
+          .map((e) => CriterionWeaknessRow.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      subAttributes: (json['subAttributes'] as List<dynamic>? ?? const [])
+          .map((e) => SubAttributeWeaknessRow.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }

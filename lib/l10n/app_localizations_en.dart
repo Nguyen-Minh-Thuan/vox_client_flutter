@@ -388,7 +388,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pzHomeStatAverage => 'Average score';
 
   @override
-  String get pzHomeStatWeeklyGoal => 'Weekly goal';
+  String get pzHomeStatWeeklyGoal => 'Sessions this week';
+
+  @override
+  String get pzHomeNoTopicYet =>
+      'No suggestions yet — pick a topic to get started';
 
   @override
   String get pzHomeWeeklyFocus => 'This week\'s focus';
@@ -416,6 +420,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pzTopicsFilterSaved => 'Saved';
+
+  @override
+  String get pzTopicsRandom => 'Pick a random topic';
+
+  @override
+  String get pzTopicsSave => 'Save topic';
+
+  @override
+  String get pzTopicsUnsave => 'Unsave';
 
   @override
   String get pzTopicsPriority => 'PRIORITY #1';
@@ -576,13 +589,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pzWeaknessSevere => 'SEVERE';
 
   @override
-  String get pzWeaknessNew => 'NEW';
-
-  @override
-  String get pzWeaknessImproving => 'IMPROVING';
+  String get pzWeaknessMedium => 'MODERATE';
 
   @override
   String get pzWeaknessMild => 'MILD';
+
+  @override
+  String get pzHistoryTitle => 'Practice history';
+
+  @override
+  String get pzHistoryEmpty => 'No practice sessions yet';
+
+  @override
+  String pzWeaknessObservations(int count) {
+    return '$count observations';
+  }
+
+  @override
+  String pzWeaknessOccurrences(int count) {
+    return '$count occurrences';
+  }
 
   @override
   String get pzWeaknessBuildSession => 'Build a session from the top 3';
@@ -717,4 +743,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pzOnboardingRestart => 'Redo speaking onboarding';
+
+  @override
+  String get pzGoalTitle => 'Practice goal';
+
+  @override
+  String get pzGoalExamPrep => 'Exam prep';
+
+  @override
+  String get pzGoalAbilityImprovement => 'Skill building';
+
+  @override
+  String get pzGoalUpdateError =>
+      'Couldn\'t update your practice goal, please try again';
+
+  @override
+  String get pzInterestQuizTitle => 'Discover your interests';
+
+  @override
+  String get pzInterestQuizHeading => 'Of these 3 things…';
+
+  @override
+  String get pzInterestQuizBody =>
+      'Pick the one most like you and the one least like you. No right answer.';
+
+  @override
+  String get pzInterestQuizMostLike => 'Most like me';
+
+  @override
+  String get pzInterestQuizLeastLike => 'Least like me';
+
+  @override
+  String get pzInterestQuizSubmitError =>
+      'Couldn\'t submit your answers, please try again';
 }

@@ -3,21 +3,24 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/storage/preference_storage.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../data/models/learner_profile.dart';
 import '../../data/models/onboarding_question.dart';
 import '../../data/personalize_repository.dart';
 import '../personalize_widgets.dart';
 import 'flas_quiz_step.dart';
-import 'interests_goals_step.dart';
-import 'learner_profile_step.dart';
+import 'interest_quiz_step.dart';
 
 /// Design `1a` — the questionnaire that builds the learner profile.
 ///
-/// Three steps: the FLAS / learning-style quiz, interests & goals, then the
-/// derived profile. The entrance speaking assessment from the design is out of
-/// scope for now.
+/// Two steps: the FLAS / learning-style quiz (still local-only, not yet wired
+/// to `submitFlsaSelfReport`), then the REAL forced-choice interest quiz
+/// (`interestQuizItems`/`submitInterestQuiz` -- NOT `PersonalizeDemoData`,
+/// this is what actually seeds `dimension_interest_score`). The old fake
+/// topic-chip/goal-tile step and the fabricated CEFR/roadmap profile summary
+/// screen (`LearnerProfileStep`) had no real backend behind them and were
+/// dropped rather than wired to fake data.
 ///
-/// Pops `true` once the profile has been accepted.
+/// Pops `true` once the quiz has been submitted (or skipped because there was
+/// nothing to answer).
 class OnboardingFlow extends StatefulWidget {
   const OnboardingFlow({super.key});
 
@@ -33,21 +36,23 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   String? _error;
 
   List<OnboardingQuestion> _questions = const [];
-  List<InterestChoice> _interestChoices = const [];
-  List<LearningGoal> _goals = const [];
+  List<InterestQuizItem> _quizItems = const [];
 
-  /// Question id → chosen option index.
+  /// Question id → chosen option index (FLSA step, local only for now).
   final Map<String, int> _answers = {};
-  final Set<String> _selectedInterests = {};
-  String? _selectedGoalId;
 
-  /// 0..questions.length-1 → quiz; then interests; then profile.
+  /// Quiz item id → chosen statement index.
+  final Map<String, int> _mostByItem = {};
+  final Map<String, int> _leastByItem = {};
+
+  /// 0..questions.length-1 → FLSA quiz; questions.length..+quizItems.length-1
+  /// → interest quiz, one triplet per step.
   int _step = 0;
   bool _submitting = false;
-  LearnerProfile? _profile;
 
-  int get _interestsStep => _questions.length;
-  int get _profileStep => _questions.length + 1;
+  int get _quizStartStep => _questions.length;
+  int get _totalSteps => _questions.length + _quizItems.length;
+  bool get _onQuizItem => _step >= _quizStartStep && _quizItems.isNotEmpty;
 
   @override
   void initState() {
@@ -62,13 +67,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     });
     try {
       final questions = await _repository.getOnboardingQuestions();
-      final interests = await _repository.getInterestChoices();
-      final goals = await _repository.getLearningGoals();
+      final quizItems = await _repository.getInterestQuizItems();
       if (!mounted) return;
       setState(() {
         _questions = questions;
-        _interestChoices = interests;
-        _goals = goals;
+        _quizItems = quizItems;
       });
     } catch (e) {
       if (!mounted) return;
@@ -87,30 +90,54 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   }
 
   Future<void> _next() async {
-    if (_step < _interestsStep) {
+    final leavingFlsa = _questions.isNotEmpty && _step == _questions.length - 1;
+    if (leavingFlsa && !await _submitFlsa()) {
+      return;
+    }
+    if (_step < _totalSteps - 1) {
       setState(() => _step++);
       return;
     }
-    if (_step == _interestsStep) {
-      await _submit();
+    if (_quizItems.isEmpty) {
+      await _finish();
       return;
     }
-    await _finish();
+    await _submitQuiz();
   }
 
-  Future<void> _submit() async {
+  /// Maps to `submitFlsaSelfReport` -- option index (0..4) shown by
+  /// `FlasQuizStep` becomes a 1..5 Likert value. Returns `false` (and shows
+  /// the error state) if the real submission failed, so `_next()` doesn't
+  /// advance past unsent answers.
+  Future<bool> _submitFlsa() async {
     setState(() => _submitting = true);
     try {
-      final profile = await _repository.submitOnboarding(
-        answers: _answers,
-        interestIds: _selectedInterests,
-        goalId: _selectedGoalId,
-      );
-      if (!mounted) return;
-      setState(() {
-        _profile = profile;
-        _step = _profileStep;
-      });
+      final answers = [
+        for (final question in _questions) (_answers[question.id] ?? 0) + 1,
+      ];
+      await _repository.submitFlsaSelfReport(answers);
+      return true;
+    } catch (e) {
+      if (mounted) setState(() => _error = '$e');
+      return false;
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _submitQuiz() async {
+    setState(() => _submitting = true);
+    try {
+      final answers = [
+        for (final item in _quizItems)
+          InterestQuizAnswer(
+            itemId: item.id,
+            mostStatementIndex: _mostByItem[item.id]!,
+            leastStatementIndex: _leastByItem[item.id]!,
+          ),
+      ];
+      await _repository.submitInterestQuiz(answers);
+      await _finish();
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = '$e');
@@ -125,14 +152,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     Navigator.of(context).pop(true);
   }
 
-  /// Skips straight to the profile with whatever has been answered so far.
-  Future<void> _skip() => _submit();
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    if (_loading) {
+    if (_loading || _submitting) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
@@ -143,52 +167,50 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         body: PersonalizeErrorView(detail: _error, onRetry: _load),
       );
     }
-
-    // The profile step owns its whole screen, header included.
-    if (_step == _profileStep && _profile != null) {
-      return LearnerProfileStep(
-        profile: _profile!,
-        onStart: _finish,
-      );
+    if (_totalSteps == 0) {
+      // Nothing to answer at all (no FLSA questions, no quiz items) -- don't
+      // show an empty questionnaire, just finish immediately.
+      _finish();
+      return const Scaffold(body: SizedBox.shrink());
     }
-
-    final onInterests = _step == _interestsStep;
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             _OnboardingHeader(
-              title: onInterests
-                  ? l10n.pzOnboardingInterestsTitle
+              title: _onQuizItem
+                  ? l10n.pzInterestQuizTitle
                   : l10n.pzOnboardingQuizTitle,
-              // The interests step replaces the counter with a Skip action.
-              counter: onInterests
-                  ? null
-                  : l10n.pzOnboardingProgress(_step + 1, _questions.length),
-              progress: onInterests
-                  ? 1
-                  : (_step + 1) / (_questions.length + 1),
+              counter: l10n.pzOnboardingProgress(_step + 1, _totalSteps),
+              progress: (_step + 1) / _totalSteps,
               onBack: _back,
-              onSkip: onInterests ? _skip : null,
             ),
             Expanded(
-              child: onInterests
-                  ? InterestsGoalsStep(
-                      choices: _interestChoices,
-                      goals: _goals,
-                      selectedInterests: _selectedInterests,
-                      selectedGoalId: _selectedGoalId,
-                      submitting: _submitting,
-                      onToggleInterest: (id) => setState(() {
-                        _selectedInterests.contains(id)
-                            ? _selectedInterests.remove(id)
-                            : _selectedInterests.add(id);
-                      }),
-                      onSelectGoal: (id) =>
-                          setState(() => _selectedGoalId = id),
-                      onContinue: _next,
-                    )
+              child: _onQuizItem
+                  ? Builder(builder: (context) {
+                      final item = _quizItems[_step - _quizStartStep];
+                      return InterestQuizStep(
+                        item: item,
+                        mostIndex: _mostByItem[item.id],
+                        leastIndex: _leastByItem[item.id],
+                        canGoBack: _step > 0,
+                        onPickMost: (index) => setState(() {
+                          _mostByItem[item.id] = index;
+                          if (_leastByItem[item.id] == index) {
+                            _leastByItem.remove(item.id);
+                          }
+                        }),
+                        onPickLeast: (index) => setState(() {
+                          _leastByItem[item.id] = index;
+                          if (_mostByItem[item.id] == index) {
+                            _mostByItem.remove(item.id);
+                          }
+                        }),
+                        onBack: _back,
+                        onContinue: _next,
+                      );
+                    })
                   : FlasQuizStep(
                       question: _questions[_step],
                       selectedIndex: _answers[_questions[_step].id],
@@ -214,18 +236,15 @@ class _OnboardingHeader extends StatelessWidget {
     required this.counter,
     required this.progress,
     required this.onBack,
-    this.onSkip,
   });
 
   final String title;
   final String? counter;
   final double progress;
   final VoidCallback onBack;
-  final VoidCallback? onSkip;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 6, 20, 14),
       decoration: const BoxDecoration(
@@ -272,18 +291,6 @@ class _OnboardingHeader extends StatelessWidget {
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textMuted,
-                  ),
-                ),
-              if (onSkip != null)
-                TextButton(
-                  onPressed: onSkip,
-                  child: Text(
-                    l10n.pzOnboardingSkip,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.indigo,
-                    ),
                   ),
                 ),
             ],

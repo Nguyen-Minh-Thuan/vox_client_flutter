@@ -158,7 +158,8 @@
   "pzHomeChangeTopic": "Đổi chủ đề",
   "pzHomeStatSessions": "Buổi đã nói",
   "pzHomeStatAverage": "Điểm TB",
-  "pzHomeStatWeeklyGoal": "Mục tiêu tuần",
+  "pzHomeStatWeeklyGoal": "Buổi tuần này",
+  "pzHomeNoTopicYet": "Chưa có gợi ý nào — chọn 1 chủ đề để bắt đầu nhé",
   "pzHomeWeeklyFocus": "Tập trung tuần này",
   "pzHomeViewProfile": "Xem hồ sơ",
   "pzHomeSuggestions": "Gợi ý cho bạn",
@@ -169,6 +170,9 @@
   "pzTopicsFilterByGoal": "Theo mục tiêu",
   "pzTopicsFilterByWeakness": "Điểm yếu",
   "pzTopicsFilterSaved": "Đã lưu",
+  "pzTopicsRandom": "Chọn ngẫu nhiên",
+  "pzTopicsSave": "Lưu chủ đề",
+  "pzTopicsUnsave": "Bỏ lưu",
   "pzTopicsPriority": "ƯU TIÊN #1",
   "pzTopicsMatch": "Khớp {percent}%",
   "@pzTopicsMatch": {
@@ -247,9 +251,18 @@
   "pzWeaknessPronunciation": "Phát âm",
   "pzWeaknessExpression": "Diễn đạt",
   "pzWeaknessSevere": "NẶNG",
-  "pzWeaknessNew": "MỚI",
-  "pzWeaknessImproving": "ĐANG TỐT LÊN",
+  "pzWeaknessMedium": "VỪA",
   "pzWeaknessMild": "NHẸ",
+  "pzHistoryTitle": "Lịch sử luyện tập",
+  "pzHistoryEmpty": "Chưa có phiên luyện tập nào",
+  "pzWeaknessObservations": "{count} lần quan sát",
+  "@pzWeaknessObservations": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "pzWeaknessOccurrences": "{count} lần lặp lại",
+  "@pzWeaknessOccurrences": {
+    "placeholders": { "count": { "type": "int" } }
+  },
   "pzWeaknessBuildSession": "Tạo buổi luyện từ 3 điểm yếu đầu",
 
   "pzInterestsTitle": "Sở thích của bạn",
@@ -305,5 +318,15 @@
   "pzOnboardingFlas": "Thái độ & động lực (FLAS)",
   "pzOnboardingRoadmap": "Lộ trình 4 tuần đề xuất",
   "pzOnboardingStartFirst": "Bắt đầu buổi đầu tiên",
-  "pzOnboardingRestart": "Làm lại onboarding luyện nói"
+  "pzOnboardingRestart": "Làm lại onboarding luyện nói",
+  "pzGoalTitle": "Mục tiêu luyện tập",
+  "pzGoalExamPrep": "Luyện thi",
+  "pzGoalAbilityImprovement": "Tăng kỹ năng",
+  "pzGoalUpdateError": "Không thể đổi mục tiêu luyện tập, thử lại nhé",
+  "pzInterestQuizTitle": "Khám phá sở thích của bạn",
+  "pzInterestQuizHeading": "Trong 3 việc dưới đây…",
+  "pzInterestQuizBody": "Chọn việc giống mình nhất và việc ít giống mình nhất. Không có đáp án đúng.",
+  "pzInterestQuizMostLike": "Giống mình nhất",
+  "pzInterestQuizLeastLike": "Ít giống mình nhất",
+  "pzInterestQuizSubmitError": "Không gửi được câu trả lời, thử lại nhé"
 }

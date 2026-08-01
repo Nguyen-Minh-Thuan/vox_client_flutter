@@ -1,12 +1,51 @@
+import 'practice_history_entry.dart';
+
 /// Time window behind the pills on the progress screen.
 enum ProgressRange { fourWeeks, threeMonths, all }
 
+const _rangeDays = {
+  ProgressRange.fourWeeks: 28,
+  ProgressRange.threeMonths: 90,
+  ProgressRange.all: 36500,
+};
+
+/// One bar in the average-score chart -- one real completed session.
+class ProgressPoint {
+  final String label;
+  final double value;
+
+  const ProgressPoint({required this.label, required this.value});
+}
+
+/// One row of "BUỔI GẦN ĐÂY" -- straight from a real `PracticeHistoryEntry`.
+class SessionHistoryItem {
+  final String id;
+  final String title;
+  final String subtitle;
+  final double score;
+
+  const SessionHistoryItem({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.score,
+  });
+}
+
 /// The chart + history shown on "Tiến độ" for one [ProgressRange].
+///
+/// No single GraphQL field returns this shape -- it's built client-side from
+/// real `myPracticeHistory` rows (`overallScore`/`startedAt` per session),
+/// NOT `myPracticeProgress` (that query mixes per-criterion scores across
+/// different criteria, which don't average into one meaningful number).
 class ProgressReport {
   final ProgressRange range;
   final double averageScore;
 
-  /// Change across the window, e.g. `+0.9`.
+  /// Real comparison against the equal-length period right before this one.
+  /// `0` when there's no prior period to compare against (not fabricated --
+  /// genuinely no data, and `0` reads as "no change" which is the honest
+  /// answer here).
   final double delta;
   final List<ProgressPoint> points;
   final List<SessionHistoryItem> recentSessions;
@@ -19,79 +58,65 @@ class ProgressReport {
     this.recentSessions = const [],
   });
 
-  /// Highest value in [points], used to scale the bars. Never zero.
   double get peak => points.fold<double>(
         1,
         (max, p) => p.value > max ? p.value : max,
       );
 
-  factory ProgressReport.fromJson(Map<String, dynamic> json) {
-    return ProgressReport(
-      range: _rangeFromJson(json['range'] as String?),
-      averageScore: (json['averageScore'] as num?)?.toDouble() ?? 0,
-      delta: (json['delta'] as num?)?.toDouble() ?? 0,
-      points: (json['points'] as List<dynamic>? ?? const [])
-          .map((e) => ProgressPoint.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      recentSessions: (json['recentSessions'] as List<dynamic>? ?? const [])
-          .map((e) => SessionHistoryItem.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
-  }
+  factory ProgressReport.fromHistory(
+    List<PracticeHistoryEntry> entries,
+    ProgressRange range,
+  ) {
+    final days = _rangeDays[range]!;
+    final now = DateTime.now();
+    final cutoff = now.subtract(Duration(days: days));
+    final previousCutoff = now.subtract(Duration(days: days * 2));
 
-  static ProgressRange _rangeFromJson(String? value) {
-    switch (value) {
-      case 'THREE_MONTHS':
-        return ProgressRange.threeMonths;
-      case 'ALL':
-        return ProgressRange.all;
-      case 'FOUR_WEEKS':
-      default:
-        return ProgressRange.fourWeeks;
+    bool isScored(PracticeHistoryEntry e) =>
+        e.overallScore != null && e.startedAt != null;
+
+    final current = entries
+        .where((e) => isScored(e) && e.startedAt!.isAfter(cutoff))
+        .toList()
+      ..sort((a, b) => a.startedAt!.compareTo(b.startedAt!));
+    final previous = entries.where(
+      (e) => isScored(e) && e.startedAt!.isAfter(previousCutoff) && e.startedAt!.isBefore(cutoff),
+    );
+
+    double average(Iterable<PracticeHistoryEntry> items) {
+      if (items.isEmpty) return 0;
+      return items.map((e) => e.overallScore!).reduce((a, b) => a + b) / items.length;
     }
-  }
-}
 
-/// One bar in the average-score chart.
-class ProgressPoint {
-  final String label;
-  final double value;
+    final averageScore = average(current);
+    final delta = previous.isEmpty ? 0.0 : averageScore - average(previous);
 
-  const ProgressPoint({required this.label, required this.value});
+    final chartEntries = current.length > 10 ? current.sublist(current.length - 10) : current;
+    final points = [
+      for (final e in chartEntries)
+        ProgressPoint(
+          label: '${e.startedAt!.day}/${e.startedAt!.month}',
+          value: e.overallScore!,
+        ),
+    ];
 
-  factory ProgressPoint.fromJson(Map<String, dynamic> json) {
-    return ProgressPoint(
-      label: json['label'] as String,
-      value: (json['value'] as num?)?.toDouble() ?? 0,
-    );
-  }
-}
+    final recent = [...current.reversed.take(10)];
+    final recentSessions = [
+      for (final e in recent)
+        SessionHistoryItem(
+          id: e.id,
+          title: e.topicName,
+          subtitle: '${e.startedAt!.day}/${e.startedAt!.month}/${e.startedAt!.year}',
+          score: e.overallScore!,
+        ),
+    ];
 
-/// One row of "BUỔI GẦN ĐÂY".
-class SessionHistoryItem {
-  final String id;
-  final String title;
-
-  /// Relative caption, e.g. "Hôm nay · 8 phút".
-  final String subtitle;
-  final double score;
-  final String icon;
-
-  const SessionHistoryItem({
-    required this.id,
-    required this.title,
-    required this.subtitle,
-    required this.score,
-    this.icon = 'chat_bubble_outline',
-  });
-
-  factory SessionHistoryItem.fromJson(Map<String, dynamic> json) {
-    return SessionHistoryItem(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      subtitle: json['subtitle'] as String? ?? '',
-      score: (json['score'] as num?)?.toDouble() ?? 0,
-      icon: json['icon'] as String? ?? 'chat_bubble_outline',
+    return ProgressReport(
+      range: range,
+      averageScore: averageScore,
+      delta: delta,
+      points: points,
+      recentSessions: recentSessions,
     );
   }
 }

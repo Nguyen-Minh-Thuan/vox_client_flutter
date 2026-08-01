@@ -158,7 +158,8 @@
   "pzHomeChangeTopic": "Change topic",
   "pzHomeStatSessions": "Sessions done",
   "pzHomeStatAverage": "Average score",
-  "pzHomeStatWeeklyGoal": "Weekly goal",
+  "pzHomeStatWeeklyGoal": "Sessions this week",
+  "pzHomeNoTopicYet": "No suggestions yet — pick a topic to get started",
   "pzHomeWeeklyFocus": "This week's focus",
   "pzHomeViewProfile": "View profile",
   "pzHomeSuggestions": "Suggested for you",
@@ -169,6 +170,9 @@
   "pzTopicsFilterByGoal": "By goal",
   "pzTopicsFilterByWeakness": "Weak spots",
   "pzTopicsFilterSaved": "Saved",
+  "pzTopicsRandom": "Pick a random topic",
+  "pzTopicsSave": "Save topic",
+  "pzTopicsUnsave": "Unsave",
   "pzTopicsPriority": "PRIORITY #1",
   "pzTopicsMatch": "{percent}% match",
   "@pzTopicsMatch": {
@@ -247,9 +251,18 @@
   "pzWeaknessPronunciation": "Pronunciation",
   "pzWeaknessExpression": "Expression",
   "pzWeaknessSevere": "SEVERE",
-  "pzWeaknessNew": "NEW",
-  "pzWeaknessImproving": "IMPROVING",
+  "pzWeaknessMedium": "MODERATE",
   "pzWeaknessMild": "MILD",
+  "pzHistoryTitle": "Practice history",
+  "pzHistoryEmpty": "No practice sessions yet",
+  "pzWeaknessObservations": "{count} observations",
+  "@pzWeaknessObservations": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "pzWeaknessOccurrences": "{count} occurrences",
+  "@pzWeaknessOccurrences": {
+    "placeholders": { "count": { "type": "int" } }
+  },
   "pzWeaknessBuildSession": "Build a session from the top 3",
 
   "pzInterestsTitle": "Your interests",
@@ -305,5 +318,15 @@
   "pzOnboardingFlas": "Attitude & motivation (FLAS)",
   "pzOnboardingRoadmap": "Suggested 4-week plan",
   "pzOnboardingStartFirst": "Start your first session",
-  "pzOnboardingRestart": "Redo speaking onboarding"
+  "pzOnboardingRestart": "Redo speaking onboarding",
+  "pzGoalTitle": "Practice goal",
+  "pzGoalExamPrep": "Exam prep",
+  "pzGoalAbilityImprovement": "Skill building",
+  "pzGoalUpdateError": "Couldn't update your practice goal, please try again",
+  "pzInterestQuizTitle": "Discover your interests",
+  "pzInterestQuizHeading": "Of these 3 things…",
+  "pzInterestQuizBody": "Pick the one most like you and the one least like you. No right answer.",
+  "pzInterestQuizMostLike": "Most like me",
+  "pzInterestQuizLeastLike": "Least like me",
+  "pzInterestQuizSubmitError": "Couldn't submit your answers, please try again"
 }

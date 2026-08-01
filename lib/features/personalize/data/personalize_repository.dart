@@ -1,8 +1,9 @@
 import '../../../core/network/graphql_client.dart';
+import '../../profile/data/profile_api.dart';
 import 'models/interest.dart';
-import 'models/learner_profile.dart';
 import 'models/onboarding_question.dart';
 import 'models/practice_dashboard.dart';
+import 'models/practice_history_entry.dart';
 import 'models/practice_session.dart';
 import 'models/practice_topic.dart';
 import 'models/progress_report.dart';
@@ -13,42 +14,55 @@ import 'personalize_demo_data.dart';
 
 /// Data source for the personalized-practice feature.
 ///
-/// Topic selection (`getTopics`/`searchTopics`/saved topics) and
-/// `getDashboard`'s `sessionsDone`/`averageScore`/`streakDays` are wired to
-/// the real backend via [PersonalizeApi] — see gói 11 mục 2.6b for exactly
-/// which fields are real vs. still backend gaps. Everything else here still
-/// resolves against [PersonalizeDemoData] after a short delay standing in
-/// for network latency (today's topic, weekly goal, onboarding, sessions,
-/// etc. have no backend support yet — same gói, same section).
+/// Every method here is either a real GraphQL call or a documented
+/// client-side aggregation of a few real calls (`getDashboard`/`getProgress`)
+/// — see each method's doc comment. The only screen still on
+/// [PersonalizeDemoData] is `SessionSummaryScreen` (`getSessionSummary`),
+/// which needs a rubric/repeated-error breakdown no query returns.
 class PersonalizeRepository {
-  PersonalizeRepository({Duration? latency, PersonalizeApi? api})
+  PersonalizeRepository({Duration? latency, PersonalizeApi? api, ProfileApi? profileApi})
       : _latency = latency ?? const Duration(milliseconds: 400),
-        _api = api ?? PersonalizeApi(GraphQLClient());
+        _api = api ?? PersonalizeApi(GraphQLClient()),
+        _profileApi = profileApi ?? ProfileApi(GraphQLClient());
 
   final Duration _latency;
   final PersonalizeApi _api;
+  final ProfileApi _profileApi;
 
   Future<T> _delayed<T>(T value) =>
       Future<T>.delayed(_latency, () => value);
 
-  /// `sessionsDone`/`averageScore`/`streakDays` come from the real
-  /// `myPracticeDashboardStats` query; the rest (today's topic, weekly
-  /// focus/goal, suggestions) still resolves against demo data — see gói 11
-  /// mục 2.6b for what's still a backend gap.
+  /// No single query returns this shape -- assembled from real
+  /// `myPracticeDashboardStats`, `practiceTopicOffers` (bucket FOR_YOU),
+  /// `myWeaknessProfile` and `profile { fullName }`. `sessionsThisWeek` is a
+  /// real count of `myPracticeHistory` entries since the start of this
+  /// calendar week (Monday) -- there's no "weekly goal target" anywhere in
+  /// the backend, so no "/N" is shown (see conversation: confirmed no such
+  /// field exists rather than guessing a number).
   Future<PracticeDashboard> getDashboard() async {
-    final base = PersonalizeDemoData.dashboard;
     final stats = await _api.getDashboardStats();
+    final offers = await _api.getTopicOffers(bucket: 'FOR_YOU');
+    final weakness = await getWeaknessProfile();
+    final history = await getPracticeHistory(limit: 50);
+    final profile = await _profileApi.getProfile();
+
+    final topics = offers.map(PracticeTopic.fromOffer).toList();
+    final now = DateTime.now();
+    final startOfWeek = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: now.weekday - 1));
+    final sessionsThisWeek = history
+        .where((e) => e.startedAt != null && !e.startedAt!.isBefore(startOfWeek))
+        .length;
+
     return PracticeDashboard(
-      learnerName: base.learnerName,
-      streakDays: (stats['streakDays'] as num?)?.toInt() ?? base.streakDays,
-      todayTopic: base.todayTopic,
-      sessionsDone: (stats['sessionsDone'] as num?)?.toInt() ?? base.sessionsDone,
-      averageScore:
-          (stats['averageScore'] as num?)?.toDouble() ?? base.averageScore,
-      weeklyGoalDone: base.weeklyGoalDone,
-      weeklyGoalTarget: base.weeklyGoalTarget,
-      weeklyFocus: base.weeklyFocus,
-      suggestions: base.suggestions,
+      learnerName: profile.fullName ?? '',
+      streakDays: (stats['streakDays'] as num?)?.toInt() ?? 0,
+      todayTopic: topics.isEmpty ? null : topics.first,
+      sessionsDone: (stats['sessionsDone'] as num?)?.toInt() ?? 0,
+      averageScore: (stats['averageScore'] as num?)?.toDouble() ?? 0,
+      sessionsThisWeek: sessionsThisWeek,
+      weeklyFocus: weakness.criteria.take(2).toList(),
+      suggestions: topics.skip(1).take(4).toList(),
     );
   }
 
@@ -136,36 +150,95 @@ class PersonalizeRepository {
     );
   }
 
+  /// Maps to `myLearnerProfile { goalType }` — current EXAM_PREP/ABILITY_IMPROVEMENT goal.
+  /// Defaults to `ABILITY_IMPROVEMENT` if the learner has never set one (matches the
+  /// backend's own default fallback).
+  Future<String> getPracticeGoal() async {
+    final goal = await _api.getPracticeGoal();
+    return goal ?? 'ABILITY_IMPROVEMENT';
+  }
+
+  /// Maps to `setPracticeGoal(goalType)` — returns the goal actually persisted.
+  Future<String> setPracticeGoal(String goalType) => _api.setPracticeGoal(goalType);
+
+  /// Maps to `interestQuizItems` — real AI-generated forced-choice triplets,
+  /// NOT `PersonalizeDemoData` (this is the cold-start interest inventory).
+  Future<List<InterestQuizItem>> getInterestQuizItems() async {
+    final items = await _api.getInterestQuizItems();
+    return items.map(InterestQuizItem.fromJson).toList();
+  }
+
+  /// Maps to `submitInterestQuiz` — scores answers into the real
+  /// `dimension_interest_score` vector server-side.
+  Future<void> submitInterestQuiz(List<InterestQuizAnswer> answers) {
+    return _api.submitInterestQuiz(answers.map((a) => a.toJson()).toList());
+  }
+
   Future<SessionSummary> getSessionSummary(String sessionId) =>
       _delayed(PersonalizeDemoData.sessionSummary);
 
-  Future<WeaknessProfile> getWeaknessProfile() =>
-      _delayed(PersonalizeDemoData.weaknessProfile);
-
-  Future<List<Interest>> getInterests() =>
-      _delayed(PersonalizeDemoData.interests);
-
-  Future<ProgressReport> getProgress(ProgressRange range) => _delayed(
-        PersonalizeDemoData.progressReports[range] ??
-            PersonalizeDemoData.progressReports[ProgressRange.fourWeeks]!,
-      );
+  /// Maps to `myWeaknessProfile` — real, not `PersonalizeDemoData`.
+  Future<WeaknessProfile> getWeaknessProfile() async {
+    final json = await _api.getWeaknessProfile();
+    return WeaknessProfile.fromJson(json);
+  }
 
   Future<List<OnboardingQuestion>> getOnboardingQuestions() =>
       _delayed(PersonalizeDemoData.onboardingQuestions);
 
-  Future<List<InterestChoice>> getInterestChoices() =>
-      _delayed(PersonalizeDemoData.interestChoices);
+  /// Maps to `submitFlsaSelfReport(answers)`.
+  Future<void> submitFlsaSelfReport(List<int> answers) =>
+      _api.submitFlsaSelfReport(answers);
 
-  Future<List<LearningGoal>> getLearningGoals() =>
-      _delayed(PersonalizeDemoData.learningGoals);
+  /// Maps to `saveTopic(topicId)`.
+  Future<void> saveTopic(String topicId) => _api.saveTopic(topicId);
 
-  /// Submits the questionnaire and returns the derived profile.
-  ///
-  /// The answers are ignored while the scoring model lives on the backend.
-  Future<LearnerProfile> submitOnboarding({
-    required Map<String, int> answers,
-    required Set<String> interestIds,
-    required String? goalId,
-  }) =>
-      _delayed(PersonalizeDemoData.learnerProfile);
+  /// Maps to `unsaveTopic(topicId)`.
+  Future<void> unsaveTopic(String topicId) => _api.unsaveTopic(topicId);
+
+  /// Maps to `pickRandomTopic`.
+  Future<PracticeTopic> pickRandomTopic() async {
+    final json = await _api.pickRandomTopic();
+    return PracticeTopic.fromOffer(json);
+  }
+
+  /// Maps to `myPracticeHistory(limit)`.
+  Future<List<PracticeHistoryEntry>> getPracticeHistory({int limit = 20}) async {
+    final rows = await _api.getPracticeHistory(limit);
+    return rows.map(PracticeHistoryEntry.fromJson).toList();
+  }
+
+  /// Builds a [ProgressReport] from real `myPracticeHistory` rows -- see
+  /// `ProgressReport.fromHistory` for why this isn't `myPracticeProgress`.
+  /// Fetches enough history to cover 2x the widest range (`all`) so the
+  /// delta comparison always has a real previous period to diff against.
+  Future<ProgressReport> getProgress(ProgressRange range) async {
+    final entries = await getPracticeHistory(limit: 200);
+    return ProgressReport.fromHistory(entries, range);
+  }
+
+  /// Maps to `myInterestProfile{topics, suggestions}` -- `topics` become
+  /// active/cooling rows, PENDING `suggestions` become "discovered" cards.
+  Future<List<Interest>> getInterests() async {
+    final json = await _api.getInterestProfile();
+    final topics = (json['topics'] as List? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(Interest.fromTopic);
+    final suggestions = (json['suggestions'] as List? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .where((s) => s['status'] == 'PENDING')
+        .map(Interest.fromSuggestion);
+    return [...suggestions, ...topics];
+  }
+
+  /// Maps to `respondToTopicSuggestion(suggestionId, accept)`.
+  Future<void> respondToTopicSuggestion(String suggestionId, bool accept) =>
+      _api.respondToTopicSuggestion(suggestionId, accept);
+
+  /// Maps to `myLearnerProfile { interestAutoUpdateEnabled }`.
+  Future<bool> getInterestAutoUpdateEnabled() => _api.getInterestAutoUpdateEnabled();
+
+  /// Maps to `setInterestAutoUpdate(enabled)` -- returns the value actually
+  /// persisted.
+  Future<bool> setInterestAutoUpdate(bool enabled) => _api.setInterestAutoUpdate(enabled);
 }

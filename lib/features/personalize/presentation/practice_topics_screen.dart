@@ -13,7 +13,9 @@ import 'personalize_widgets.dart';
 /// Pops the [PracticeTopic] the learner picked so the caller decides how to
 /// open the session.
 class PracticeTopicsScreen extends StatefulWidget {
-  const PracticeTopicsScreen({super.key});
+  const PracticeTopicsScreen({super.key, this.initialFilter = TopicFilter.forYou});
+
+  final TopicFilter initialFilter;
 
   @override
   State<PracticeTopicsScreen> createState() => _PracticeTopicsScreenState();
@@ -23,8 +25,9 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
   final _repository = PersonalizeRepository();
   final _searchController = TextEditingController();
 
-  TopicFilter _filter = TopicFilter.forYou;
+  late TopicFilter _filter = widget.initialFilter;
   bool _loading = true;
+  bool _pickingRandom = false;
   String? _error;
   List<PracticeTopic> _topics = const [];
 
@@ -68,11 +71,81 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
 
   void _pick(PracticeTopic topic) => Navigator.of(context).pop(topic);
 
+  Future<void> _toggleSaved(PracticeTopic topic) async {
+    final isSaved = topic.buckets.contains(TopicFilter.saved);
+    // Optimistic: flip locally first, revert on failure.
+    setState(() {
+      _topics = [
+        for (final t in _topics)
+          if (t.id == topic.id)
+            PracticeTopic(
+              id: t.id,
+              title: t.title,
+              rationale: t.rationale,
+              minutes: t.minutes,
+              level: t.level,
+              matchPercent: t.matchPercent,
+              reasons: t.reasons,
+              focusTags: t.focusTags,
+              icon: t.icon,
+              buckets: {
+                ...t.buckets,
+                if (!isSaved) TopicFilter.saved,
+              }..removeWhere((b) => isSaved && b == TopicFilter.saved),
+            )
+          else
+            t,
+      ];
+    });
+    try {
+      if (isSaved) {
+        await _repository.unsaveTopic(topic.id);
+      } else {
+        await _repository.saveTopic(topic.id);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _topics = [
+          for (final t in _topics)
+            if (t.id == topic.id) topic else t,
+        ];
+      });
+    }
+  }
+
+  Future<void> _pickRandom() async {
+    if (_pickingRandom) return;
+    setState(() => _pickingRandom = true);
+    try {
+      final topic = await _repository.pickRandomTopic();
+      if (!mounted) return;
+      _pick(topic);
+    } catch (_) {
+      if (mounted) setState(() => _pickingRandom = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.pzTopicsTitle)),
+      appBar: AppBar(
+        title: Text(l10n.pzTopicsTitle),
+        actions: [
+          IconButton(
+            onPressed: _pickingRandom ? null : _pickRandom,
+            icon: _pickingRandom
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.shuffle),
+            tooltip: l10n.pzTopicsRandom,
+          ),
+        ],
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -126,13 +199,21 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 2, 20, 24),
       children: [
-        _PriorityCard(topic: priority, onSpeak: () => _pick(priority)),
+        _PriorityCard(
+          topic: priority,
+          onSpeak: () => _pick(priority),
+          onToggleSaved: () => _toggleSaved(priority),
+        ),
         if (rest.isNotEmpty) ...[
           const SizedBox(height: 16),
           SectionLabel(l10n.pzTopicsOtherSuggestions),
           const SizedBox(height: 10),
           for (final topic in rest) ...[
-            _TopicRow(topic: topic, onTap: () => _pick(topic)),
+            _TopicRow(
+              topic: topic,
+              onTap: () => _pick(topic),
+              onToggleSaved: () => _toggleSaved(topic),
+            ),
             const SizedBox(height: 8),
           ],
         ],
@@ -243,10 +324,15 @@ class _FilterPills extends StatelessWidget {
 
 /// The highlighted top match.
 class _PriorityCard extends StatelessWidget {
-  const _PriorityCard({required this.topic, required this.onSpeak});
+  const _PriorityCard({
+    required this.topic,
+    required this.onSpeak,
+    required this.onToggleSaved,
+  });
 
   final PracticeTopic topic;
   final VoidCallback onSpeak;
+  final VoidCallback onToggleSaved;
 
   @override
   Widget build(BuildContext context) {
@@ -295,6 +381,11 @@ class _PriorityCard extends StatelessWidget {
                   ),
                 ),
               ],
+              const Spacer(),
+              _SaveButton(
+                saved: topic.buckets.contains(TopicFilter.saved),
+                onTap: onToggleSaved,
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -355,6 +446,32 @@ class _PriorityCard extends StatelessWidget {
   }
 }
 
+/// Bookmark toggle shared by `_PriorityCard` and `_TopicRow`.
+class _SaveButton extends StatelessWidget {
+  const _SaveButton({required this.saved, required this.onTap});
+
+  final bool saved;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(99),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Icon(
+          saved ? Icons.bookmark : Icons.bookmark_border,
+          size: 20,
+          color: saved ? AppColors.indigo : const Color(0xFF999999),
+          semanticLabel: saved ? l10n.pzTopicsUnsave : l10n.pzTopicsSave,
+        ),
+      ),
+    );
+  }
+}
+
 class _WhiteChip extends StatelessWidget {
   const _WhiteChip(this.label, {this.color = AppColors.indigo});
 
@@ -382,10 +499,15 @@ class _WhiteChip extends StatelessWidget {
 }
 
 class _TopicRow extends StatelessWidget {
-  const _TopicRow({required this.topic, required this.onTap});
+  const _TopicRow({
+    required this.topic,
+    required this.onTap,
+    required this.onToggleSaved,
+  });
 
   final PracticeTopic topic;
   final VoidCallback onTap;
+  final VoidCallback onToggleSaved;
 
   @override
   Widget build(BuildContext context) {
@@ -414,13 +536,23 @@ class _TopicRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    topic.title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.ink,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          topic.title,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                      ),
+                      _SaveButton(
+                        saved: topic.buckets.contains(TopicFilter.saved),
+                        onTap: onToggleSaved,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 3),
                   Text(

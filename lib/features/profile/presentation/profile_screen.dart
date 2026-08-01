@@ -7,8 +7,10 @@ import '../../../app/widgets.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../result/presentation/results_list_screen.dart';
 import '../../appeal/presentation/appeals_screen.dart';
+import '../../personalize/data/personalize_repository.dart';
 import '../../personalize/presentation/interests_screen.dart';
 import '../../personalize/presentation/onboarding/onboarding_flow.dart';
+import '../../personalize/presentation/practice_history_screen.dart';
 import '../../personalize/presentation/progress_screen.dart';
 import '../../personalize/presentation/weakness_profile_screen.dart';
 import '../../practice/presentation/recordings_screen.dart';
@@ -265,11 +267,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   _MenuItem(
+                    icon: Icons.history,
+                    label: l10n.pzHistoryTitle,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const PracticeHistoryScreen()),
+                    ),
+                  ),
+                  _MenuItem(
                     icon: Icons.restart_alt,
                     label: l10n.pzOnboardingRestart,
                     onTap: _restartPracticeOnboarding,
                   ),
                 ]),
+                const SizedBox(height: 12),
+                const _PracticeGoalSelector(),
                 const SizedBox(height: 20),
               ],
 
@@ -280,6 +292,140 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Toggle between `EXAM_PREP` and `ABILITY_IMPROVEMENT` (`setPracticeGoal`
+/// mutation) — freely switchable any time, no lock/one-time restriction on
+/// the backend. EXAM_PREP scopes practice topics to the student's school +
+/// current grade's exam question bank instead of the AI-suggested pool.
+class _PracticeGoalSelector extends StatefulWidget {
+  const _PracticeGoalSelector();
+
+  @override
+  State<_PracticeGoalSelector> createState() => _PracticeGoalSelectorState();
+}
+
+class _PracticeGoalSelectorState extends State<_PracticeGoalSelector> {
+  final _repository = PersonalizeRepository();
+
+  String? _goal;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository.getPracticeGoal().then((value) {
+      if (mounted) setState(() => _goal = value);
+    });
+  }
+
+  Future<void> _select(String goalType) async {
+    if (_saving || _goal == goalType) return;
+    final previous = _goal;
+    setState(() {
+      _saving = true;
+      _goal = goalType;
+    });
+    try {
+      final saved = await _repository.setPracticeGoal(goalType);
+      if (mounted) setState(() => _goal = saved);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _goal = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.pzGoalUpdateError)),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.pzGoalTitle,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _GoalOption(
+                  label: l10n.pzGoalAbilityImprovement,
+                  selected: _goal == 'ABILITY_IMPROVEMENT',
+                  enabled: !_saving,
+                  onTap: () => _select('ABILITY_IMPROVEMENT'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _GoalOption(
+                  label: l10n.pzGoalExamPrep,
+                  selected: _goal == 'EXAM_PREP',
+                  enabled: !_saving,
+                  onTap: () => _select('EXAM_PREP'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoalOption extends StatelessWidget {
+  const _GoalOption({
+    required this.label,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.ink : AppColors.fieldBg,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : const Color(0xFF555555),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -254,8 +254,8 @@ class _HistoryRow extends StatelessWidget {
               color: AppColors.fieldBg,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(iconForName(session.icon),
-                size: 20, color: const Color(0xFF555555)),
+            child: const Icon(Icons.chat_bubble_outline,
+                size: 20, color: Color(0xFF555555)),
           ),
           const SizedBox(width: 12),
           Expanded(

@@ -1,37 +1,42 @@
 /// Where an interest sits in the self-updating profile.
 enum InterestStatus {
-  /// Spoken about recently — listed under "ĐANG HOẠT ĐỘNG".
+  /// Real `TopicInterest` row, mentioned within the last 21 days.
   active,
 
-  /// Not mentioned for a while — listed under "ĐANG NGUỘI DẦN".
+  /// Real `TopicInterest` row, not mentioned in 21+ days -- derived from the
+  /// real `lastMentionedAt` timestamp (now exposed by the backend), NOT
+  /// fabricated: a fixed cutoff applied to a real date.
   cooling,
 
-  /// Inferred from transcripts, awaiting the learner's confirmation.
+  /// A real AI `TopicSuggestion` (status PENDING) awaiting the learner's
+  /// accept/dismiss via `respondToTopicSuggestion`.
   discovered,
 }
 
-/// A topic the learner likes talking about.
+const _coolingCutoffDays = 21;
+
+/// A topic the learner likes talking about (real `topics`/`suggestions` from
+/// `myInterestProfile`).
 class Interest {
   final String id;
-  final String emoji;
   final String label;
   final InterestStatus status;
 
-  /// Sub-caption, e.g. "nói 5/8 buổi" or "Không nhắc tới trong 6 buổi gần nhất".
+  /// Sub-caption, e.g. "nói 5 buổi".
   final String detail;
 
-  /// Meter fill, 0..1. Unused for cooling entries.
+  /// Meter fill, 0..1. Unused for [InterestStatus.discovered].
   final double ratio;
 
-  /// Only for [InterestStatus.discovered] — 0..100 confidence.
+  /// Only for [InterestStatus.discovered] -- 0..100 confidence, real field
+  /// from `TopicSuggestion.confidence`.
   final int? confidence;
 
-  /// Only for [InterestStatus.discovered] — why it was inferred.
+  /// Only for [InterestStatus.discovered] -- real `TopicSuggestion.reasonText`.
   final String? evidence;
 
   const Interest({
     required this.id,
-    required this.emoji,
     required this.label,
     required this.status,
     this.detail = '',
@@ -40,41 +45,46 @@ class Interest {
     this.evidence,
   });
 
-  Interest copyWith({InterestStatus? status, String? detail, double? ratio}) {
+  Interest copyWith({InterestStatus? status}) {
     return Interest(
       id: id,
-      emoji: emoji,
       label: label,
       status: status ?? this.status,
-      detail: detail ?? this.detail,
-      ratio: ratio ?? this.ratio,
+      detail: detail,
+      ratio: ratio,
       confidence: confidence,
       evidence: evidence,
     );
   }
 
-  factory Interest.fromJson(Map<String, dynamic> json) {
+  /// Builds from one `TopicInterest` row (`topics` in `myInterestProfile`).
+  factory Interest.fromTopic(Map<String, dynamic> json) {
+    final score = (json['score'] as num?)?.toDouble() ?? 0;
+    final sessionsMentioned = (json['sessionsMentioned'] as num?)?.toInt() ?? 0;
+    final lastMentionedAt = json['lastMentionedAt'] == null
+        ? null
+        : DateTime.tryParse(json['lastMentionedAt'] as String);
+    final cooling = lastMentionedAt == null ||
+        DateTime.now().difference(lastMentionedAt).inDays > _coolingCutoffDays;
     return Interest(
-      id: json['id'] as String,
-      emoji: json['emoji'] as String? ?? '',
-      label: json['label'] as String,
-      status: _statusFromJson(json['status'] as String?),
-      detail: json['detail'] as String? ?? '',
-      ratio: (json['ratio'] as num?)?.toDouble() ?? 0,
-      confidence: (json['confidence'] as num?)?.toInt(),
-      evidence: json['evidence'] as String?,
+      id: json['topicId'] as String,
+      label: json['name'] as String,
+      status: cooling ? InterestStatus.cooling : InterestStatus.active,
+      detail: 'Nói $sessionsMentioned buổi',
+      ratio: score.clamp(0.0, 1.0),
     );
   }
 
-  static InterestStatus _statusFromJson(String? value) {
-    switch (value) {
-      case 'COOLING':
-        return InterestStatus.cooling;
-      case 'DISCOVERED':
-        return InterestStatus.discovered;
-      case 'ACTIVE':
-      default:
-        return InterestStatus.active;
-    }
+  /// Builds from one `TopicSuggestion` row (`suggestions`, status PENDING
+  /// only -- `id` here is the suggestion id, used for `respondToTopicSuggestion`).
+  factory Interest.fromSuggestion(Map<String, dynamic> json) {
+    final confidence = (json['confidence'] as num?)?.toDouble();
+    return Interest(
+      id: json['id'] as String,
+      label: json['suggestedTopicName'] as String,
+      status: InterestStatus.discovered,
+      confidence: confidence == null ? null : (confidence * 100).round(),
+      evidence: json['reasonText'] as String?,
+    );
   }
 }
