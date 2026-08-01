@@ -20,6 +20,9 @@ class ScheduleRepository {
 
   Future<List<ExamSchedule>> getExams() => _api.getExams();
 
+  Future<List<ExamRoomSchedule>> getStudentSchedule() =>
+      _api.getMyExamSchedules();
+
   /// Centralized exams the teacher proctors, one item per room assignment.
   Future<List<TeacherScheduleItem>> getTeacherCentralizedSchedule({
     required String schoolId,

@@ -221,8 +221,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (_profile?.roleCode != 'TEACHER') ...[
                   _MenuItem(
                     icon: Icons.description_outlined,
-                    label: l10n.menuMyResults,
-                    target: _Target.results,
+                    label: 'Bài kiểm tra của tôi',
+                    target: _Target.examResults,
+                  ),
+                  _MenuItem(
+                    icon: Icons.assignment_outlined,
+                    label: 'Bài tập của tôi',
+                    target: _Target.classTestResults,
                   ),
                   _MenuItem(
                     icon: Icons.mic_none,
@@ -579,7 +584,7 @@ class _MenuGroup extends StatelessWidget {
   }
 }
 
-enum _Target { none, results, appeals, recordings }
+enum _Target { none, examResults, classTestResults, appeals, recordings }
 
 class _MenuItem extends StatelessWidget {
   const _MenuItem({
@@ -606,9 +611,13 @@ class _MenuItem extends StatelessWidget {
       return;
     }
     switch (target) {
-      case _Target.results:
+      case _Target.examResults:
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const ResultsListScreen()),
+          MaterialPageRoute(builder: (_) => const MyExamsScreen()),
+        );
+      case _Target.classTestResults:
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const MyClassTestsScreen()),
         );
       case _Target.appeals:
         Navigator.of(context).push(

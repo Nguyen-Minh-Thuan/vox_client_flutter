@@ -8,8 +8,6 @@ class AppealSummary {
     required this.status,
     required this.requestedAt,
     required this.deadline,
-    required this.reviewerCount,
-    required this.doneCount,
     required this.overdue,
   });
 
@@ -21,8 +19,6 @@ class AppealSummary {
   final String status;
   final DateTime requestedAt;
   final DateTime? deadline;
-  final int reviewerCount;
-  final int doneCount;
   final bool overdue;
 
   factory AppealSummary.fromJson(Map<String, dynamic> json) => AppealSummary(
@@ -36,8 +32,6 @@ class AppealSummary {
         deadline: json['deadline'] == null
             ? null
             : DateTime.parse(json['deadline'] as String),
-        reviewerCount: json['reviewerCount'] as int,
-        doneCount: json['doneCount'] as int,
         overdue: json['overdue'] as bool,
       );
 }

@@ -2,6 +2,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/network/graphql_client.dart';
 import 'models/appeal_summary.dart';
+import 'models/appeal_detail.dart';
 
 class AppealApi {
   AppealApi(this._client, this._graphQLClient);
@@ -38,8 +39,6 @@ class AppealApi {
             status
             requestedAt
             deadline
-            reviewerCount
-            doneCount
             overdue
           }
         }
@@ -50,5 +49,19 @@ class AppealApi {
     return content
         .map((e) => AppealSummary.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<AppealDetail> getAppeal(String id) async {
+    final data = await _graphQLClient.query('''
+      query MyAppeal(\$id: ID!) {
+        myAppeal(id: \$id) {
+          id examName className originalScore status requestedAt deadline
+          reason notes decisionNote finalScore approvedAt resolvedAt overdue
+          scoringScaleMin scoringScaleMax
+          items { appealItemId paperItemId partLabel finalScore }
+        }
+      }
+    ''', variables: {'id': id});
+    return AppealDetail.fromJson(data['myAppeal'] as Map<String, dynamic>);
   }
 }

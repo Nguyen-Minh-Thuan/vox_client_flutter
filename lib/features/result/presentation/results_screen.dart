@@ -17,10 +17,12 @@ class ResultsScreen extends StatefulWidget {
     super.key,
     required this.sessionId,
     required this.examName,
+    this.pageTitle = 'Kết quả bài kiểm tra',
   });
 
   final String sessionId;
   final String examName;
+  final String pageTitle;
 
   @override
   State<ResultsScreen> createState() => _ResultsScreenState();
@@ -68,9 +70,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.dark),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
-        title: const Text(
-          'Your Results',
-          style: TextStyle(
+        title: Text(
+          widget.pageTitle,
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: AppColors.dark,
@@ -206,6 +208,32 @@ class _ResultsScreenState extends State<ResultsScreen> {
       ],
     );
   }
+}
+
+class ExamResultScreen extends StatelessWidget {
+  const ExamResultScreen({super.key, required this.sessionId, required this.examName});
+  final String sessionId;
+  final String examName;
+
+  @override
+  Widget build(BuildContext context) => ResultsScreen(
+        sessionId: sessionId,
+        examName: examName,
+        pageTitle: 'Kết quả bài kiểm tra',
+      );
+}
+
+class ClassTestResultScreen extends StatelessWidget {
+  const ClassTestResultScreen({super.key, required this.sessionId, required this.examName});
+  final String sessionId;
+  final String examName;
+
+  @override
+  Widget build(BuildContext context) => ResultsScreen(
+        sessionId: sessionId,
+        examName: examName,
+        pageTitle: 'Kết quả bài tập',
+      );
 }
 
 class _ScoreHero extends StatelessWidget {

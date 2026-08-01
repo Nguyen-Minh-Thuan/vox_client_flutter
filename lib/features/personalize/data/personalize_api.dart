@@ -369,6 +369,28 @@ class PersonalizeApi {
     return sessions.cast<Map<String, dynamic>>();
   }
 
+  Future<Map<String, dynamic>> getPracticeSessionDetail(String sessionId) async {
+    final data = await _client.query('''
+      query MyPracticeSessionDetail(\$sessionId: ID!) {
+        myPracticeSessionDetail(sessionId: \$sessionId) {
+          sessionId
+          topicName
+          startedAt
+          durationSeconds
+          itemCount
+          overallScore
+          completed
+          criterionScores { criterionCode score matchedBandCode }
+          turns {
+            turnOrder transcript audioUrl wordFeedbackJson turnScore
+            corrections { category originalText correctedText explanation correctAudioUrl }
+          }
+        }
+      }
+    ''', variables: {'sessionId': sessionId});
+    return data['myPracticeSessionDetail'] as Map<String, dynamic>;
+  }
+
   /// Maps to `myInterestProfile` — `topics` (real score/sessionsMentioned/lastMentionedAt)
   /// plus `suggestions` (AI-suggested topics, status PENDING become the "discovered" cards).
   Future<Map<String, dynamic>> getInterestProfile() async {

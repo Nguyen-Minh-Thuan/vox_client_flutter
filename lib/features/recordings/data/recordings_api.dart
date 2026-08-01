@@ -1,6 +1,7 @@
 import '../../../core/network/graphql_client.dart';
 import 'models/exam_attempt_summary.dart';
 import 'models/exam_item_response.dart';
+import 'models/exam_item_evaluation.dart';
 import 'models/exam_response_item.dart';
 
 class RecordingsApi {
@@ -67,5 +68,18 @@ class RecordingsApi {
 
     return ExamItemResponse.fromJson(
         data['examItemResponse'] as Map<String, dynamic>);
+  }
+
+  Future<ExamItemEvaluation?> getItemEvaluation(String answerId) async {
+    final data = await _client.query('''
+      query ExamItemResponseEvaluation(\$answerId: ID!) {
+        examItemResponseEvaluation(answerId: \$answerId) {
+          criteria { criterionCode criterionName finalScore minScore maxScore rationale }
+          turns { id turnOrder wordFeedback }
+        }
+      }
+    ''', variables: {'answerId': answerId});
+    final evaluation = data['examItemResponseEvaluation'] as Map<String, dynamic>?;
+    return evaluation == null ? null : ExamItemEvaluation.fromJson(evaluation);
   }
 }

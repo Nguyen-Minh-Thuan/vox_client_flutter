@@ -4,6 +4,7 @@ import 'package:just_audio/just_audio.dart';
 import '../../../app/theme.dart';
 import '../../../core/network/graphql_client.dart';
 import '../../recordings/data/models/exam_item_response.dart';
+import '../../recordings/data/models/exam_item_evaluation.dart';
 import '../../recordings/data/models/exam_response_item.dart';
 import '../../recordings/data/recordings_api.dart';
 import '../../recordings/data/recordings_repository.dart';
@@ -35,6 +36,7 @@ class _AttemptRecordingsScreenState extends State<AttemptRecordingsScreen> {
 
   String? _expandedId;
   final Map<String, ExamItemResponse> _details = {};
+  final Map<String, ExamItemEvaluation?> _evaluations = {};
 
   String? _playingKey;
 
@@ -75,9 +77,15 @@ class _AttemptRecordingsScreenState extends State<AttemptRecordingsScreen> {
     setState(() => _expandedId = item.responseId);
     if (_details.containsKey(item.responseId)) return;
     try {
-      final detail = await _repository.getItemResponse(item.responseId);
+      final detailFuture = _repository.getItemResponse(item.responseId);
+      final evaluationFuture = _repository.getItemEvaluation(item.responseId);
+      final detail = await detailFuture;
+      final evaluation = await evaluationFuture;
       if (!mounted) return;
-      setState(() => _details[item.responseId] = detail);
+      setState(() {
+        _details[item.responseId] = detail;
+        _evaluations[item.responseId] = evaluation;
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() => _expandedId = null);
@@ -86,8 +94,12 @@ class _AttemptRecordingsScreenState extends State<AttemptRecordingsScreen> {
 
   Future<void> _togglePlay(String key, String? audioUrl) async {
     if (_playingKey == key) {
-      await _player.pause();
-      setState(() => _playingKey = null);
+      if (_player.playing) {
+        await _player.pause();
+      } else {
+        await _player.play();
+      }
+      if (mounted) setState(() {});
       return;
     }
     if (audioUrl == null) return;
@@ -155,6 +167,7 @@ class _AttemptRecordingsScreenState extends State<AttemptRecordingsScreen> {
                           index: i + 1,
                           item: item,
                           detail: _details[item.responseId],
+                          evaluation: _evaluations[item.responseId],
                           expanded: _expandedId == item.responseId,
                           playingKey: _playingKey,
                           player: _player,
@@ -172,6 +185,7 @@ class _ItemCard extends StatelessWidget {
     required this.index,
     required this.item,
     required this.detail,
+    required this.evaluation,
     required this.expanded,
     required this.playingKey,
     required this.player,
@@ -182,6 +196,7 @@ class _ItemCard extends StatelessWidget {
   final int index;
   final ExamResponseItem item;
   final ExamItemResponse? detail;
+  final ExamItemEvaluation? evaluation;
   final bool expanded;
   final String? playingKey;
   final AudioPlayer player;
@@ -264,6 +279,7 @@ class _ItemCard extends StatelessWidget {
                   playing: playingKey == turn.id,
                   player: player,
                   onPlay: () => onPlay(turn.id, turn.audioUrl),
+                  wordFeedback: _wordFeedbackFor(turn),
                 )
             else
               _TurnRow(
@@ -277,11 +293,25 @@ class _ItemCard extends StatelessWidget {
                 playing: playingKey == detail!.id,
                 player: player,
                 onPlay: () => onPlay(detail!.id, detail!.audioUrl),
+                wordFeedback: const [],
               ),
+            if (detail != null) ...[
+              const Divider(height: 1, color: Color(0xFFF1F5F9)),
+              _CriterionBreakdown(evaluation: evaluation),
+            ],
           ],
         ],
       ),
     );
+  }
+
+  List<WordFeedback> _wordFeedbackFor(ExamItemResponseTurn turn) {
+    for (final evaluationTurn in evaluation?.turns ?? const <ExamItemEvaluationTurn>[]) {
+      if (evaluationTurn.id == turn.id || evaluationTurn.turnOrder == turn.turnOrder) {
+        return evaluationTurn.wordFeedback;
+      }
+    }
+    return const [];
   }
 }
 
@@ -291,12 +321,14 @@ class _TurnRow extends StatelessWidget {
     required this.playing,
     required this.player,
     required this.onPlay,
+    required this.wordFeedback,
   });
 
   final ExamItemResponseTurn turn;
   final bool playing;
   final AudioPlayer player;
   final VoidCallback onPlay;
+  final List<WordFeedback> wordFeedback;
 
   @override
   Widget build(BuildContext context) {
@@ -316,10 +348,14 @@ class _TurnRow extends StatelessWidget {
                     color: playing ? AppColors.indigo : AppColors.chipBlueBg,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    playing ? Icons.pause : Icons.play_arrow,
-                    color: playing ? Colors.white : AppColors.indigo,
-                    size: 20,
+                  child: StreamBuilder<bool>(
+                    stream: player.playingStream,
+                    initialData: player.playing,
+                    builder: (_, snapshot) => Icon(
+                      playing && (snapshot.data ?? false) ? Icons.pause : Icons.play_arrow,
+                      color: playing ? Colors.white : AppColors.indigo,
+                      size: 20,
+                    ),
                   ),
                 ),
               ),
@@ -359,19 +395,36 @@ class _TurnRow extends StatelessWidget {
                               : (position.inMilliseconds /
                                       total.inMilliseconds)
                                   .clamp(0.0, 1.0);
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(99),
-                            child: Container(
-                              height: 4,
-                              color: const Color(0xFFE2E8F0),
-                              child: FractionallySizedBox(
-                                alignment: Alignment.centerLeft,
-                                widthFactor: progress,
-                                child: Container(color: AppColors.indigo),
+                          return Column(
+                            children: [
+                              Slider(
+                                value: progress,
+                                onChanged: total.inMilliseconds == 0 ? null : (value) => player.seek(Duration(milliseconds: (value * total.inMilliseconds).round())),
                               ),
-                            ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(_formatDuration(position.inSeconds), style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                                  Text(_formatDuration(total.inSeconds), style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                                ],
+                              ),
+                            ],
                           );
                         },
+                      ),
+                    ],
+                    if (wordFeedback.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: wordFeedback.map((word) => ActionChip(
+                          label: Text(word.word),
+                          backgroundColor: _wordColor(word.color).$1,
+                          labelStyle: TextStyle(color: _wordColor(word.color).$2, fontWeight: FontWeight.w600),
+                          side: BorderSide.none,
+                          onPressed: () => _showWordDetail(context, word),
+                        )).toList(),
                       ),
                     ],
                     if (turn.transcript != null &&
@@ -394,10 +447,78 @@ class _TurnRow extends StatelessWidget {
     );
   }
 
+  (Color, Color) _wordColor(String? color) {
+    switch (color?.toLowerCase()) {
+      case 'green': return (const Color(0xFFDCFCE7), const Color(0xFF166534));
+      case 'yellow': return (const Color(0xFFFEF3C7), const Color(0xFF92400E));
+      case 'red': return (const Color(0xFFFEE2E2), const Color(0xFFB91C1C));
+      default: return (const Color(0xFFF1F5F9), AppColors.muted);
+    }
+  }
+
+  void _showWordDetail(BuildContext context, WordFeedback word) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(word.word, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.dark)),
+              if (word.accuracyScore != null) Text('Độ chính xác: ${word.accuracyScore!.toStringAsFixed(1)}', style: const TextStyle(color: AppColors.muted)),
+              if (word.errorNote?.isNotEmpty == true) Padding(padding: const EdgeInsets.only(top: 10), child: Text(word.errorNote!, style: const TextStyle(fontSize: 14, color: AppColors.dark))),
+              if (word.phonemes.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                const Text('Chi tiết âm', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.dark)),
+                const SizedBox(height: 8),
+                for (final phoneme in word.phonemes) Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('${phoneme.phoneme}: ${phoneme.note ?? phoneme.accuracyScore?.toStringAsFixed(1) ?? 'Không có ghi chú'}', style: const TextStyle(fontSize: 13, color: AppColors.muted))),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   String _formatDuration(int? seconds) {
     if (seconds == null) return '';
     final m = seconds ~/ 60;
     final s = seconds % 60;
     return '$m:${s.toString().padLeft(2, '0')}';
+  }
+}
+
+class _CriterionBreakdown extends StatelessWidget {
+  const _CriterionBreakdown({required this.evaluation});
+  final ExamItemEvaluation? evaluation;
+
+  @override
+  Widget build(BuildContext context) {
+    if (evaluation == null) {
+      return const Padding(padding: EdgeInsets.all(16), child: Text('Chưa có đánh giá chi tiết.', style: TextStyle(fontSize: 13, color: AppColors.muted)));
+    }
+    return Padding(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Theo tiêu chí', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.dark)),
+          const SizedBox(height: 10),
+          for (final criterion in evaluation!.criteria) Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE2E8F0))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [Expanded(child: Text(criterion.criterionName ?? criterion.criterionCode, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.dark))), Text('${criterion.finalScore?.toStringAsFixed(1) ?? '-'} / ${criterion.maxScore?.toStringAsFixed(1) ?? '-'}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.indigo))]),
+              if (criterion.rationale?.isNotEmpty == true) Padding(padding: const EdgeInsets.only(top: 6), child: Text(criterion.rationale!, style: const TextStyle(fontSize: 12.5, color: AppColors.muted))),
+            ]),
+          ),
+        ],
+      ),
+    );
   }
 }

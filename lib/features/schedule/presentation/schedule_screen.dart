@@ -9,6 +9,7 @@ import '../../profile/data/profile_api.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../teacher_exam/data/teacher_exam_graphql_api.dart';
 import '../data/models/exam_schedule.dart';
+import '../data/models/exam_room_schedule.dart';
 import '../data/schedule_api.dart';
 import '../data/schedule_repository.dart';
 
@@ -69,6 +70,19 @@ class _ScheduleEntry {
         endAt: item.schedule.endDate,
         roomLabel: item.schedule.roomCode ?? item.schedule.roomName,
       );
+
+  factory _ScheduleEntry.fromStudentItem(
+    ExamRoomSchedule schedule,
+    ExamSchedule exam,
+  ) => _ScheduleEntry(
+        name: exam.name,
+        description: exam.description,
+        kind: exam.kind,
+        status: exam.status,
+        startAt: schedule.startDate,
+        endAt: schedule.endDate,
+        roomLabel: schedule.roomCode ?? schedule.roomName,
+      );
 }
 
 /// Tab 2 — Schedule.
@@ -120,8 +134,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         );
         entries.addAll(items.map(_ScheduleEntry.fromTeacherItem));
       } else {
-        final exams = await _repository.getExams();
-        entries.addAll(exams.map(_ScheduleEntry.fromExamSchedule));
+        final schedulesFuture = _repository.getStudentSchedule();
+        final examsFuture = _repository.getExams();
+        final schedules = await schedulesFuture;
+        final exams = await examsFuture;
+        final examsById = {for (final exam in exams) exam.id: exam};
+        for (final schedule in schedules) {
+          final exam = examsById[schedule.examId];
+          if (exam != null) {
+            entries.add(_ScheduleEntry.fromStudentItem(schedule, exam));
+          }
+        }
       }
       final byDay = <DateTime, List<_ScheduleEntry>>{};
       for (final e in entries) {

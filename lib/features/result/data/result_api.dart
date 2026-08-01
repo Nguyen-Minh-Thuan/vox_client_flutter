@@ -11,8 +11,13 @@ class ResultApi {
     final data = await _client.query('''
       query MyExamResults {
         myExamResults {
+          examId
+          examCode
+          kind
           sessionId
+          sessionStatus
           examName
+          startedAt
           totalScore
           resultStatus
           submittedAt

@@ -1,5 +1,6 @@
 import 'models/exam_attempt_summary.dart';
 import 'models/exam_item_response.dart';
+import 'models/exam_item_evaluation.dart';
 import 'models/exam_response_item.dart';
 import 'recordings_api.dart';
 
@@ -16,4 +17,7 @@ class RecordingsRepository {
 
   Future<ExamItemResponse> getItemResponse(String answerId) =>
       _recordingsApi.getItemResponse(answerId);
+
+  Future<ExamItemEvaluation?> getItemEvaluation(String answerId) =>
+      _recordingsApi.getItemEvaluation(answerId);
 }

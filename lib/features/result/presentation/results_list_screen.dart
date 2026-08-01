@@ -7,20 +7,48 @@ import '../data/result_api.dart';
 import '../data/result_repository.dart';
 import 'results_screen.dart';
 
-/// My Results — list of the student's real exam results.
-class ResultsListScreen extends StatefulWidget {
+class ResultsListScreen extends StatelessWidget {
   const ResultsListScreen({super.key});
 
   @override
-  State<ResultsListScreen> createState() => _ResultsListScreenState();
+  Widget build(BuildContext context) => const MyExamsScreen();
 }
 
-class _ResultsListScreenState extends State<ResultsListScreen> {
-  final _repository = ResultRepository(ResultApi(GraphQLClient()));
+class MyExamsScreen extends StatelessWidget {
+  const MyExamsScreen({super.key});
 
+  @override
+  Widget build(BuildContext context) => const _ResultsListCore(
+        kind: ExamKind.centralized,
+        title: 'Bài kiểm tra của tôi',
+      );
+}
+
+class MyClassTestsScreen extends StatelessWidget {
+  const MyClassTestsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => const _ResultsListCore(
+        kind: ExamKind.classTest,
+        title: 'Bài tập của tôi',
+      );
+}
+
+class _ResultsListCore extends StatefulWidget {
+  const _ResultsListCore({required this.kind, required this.title});
+  final ExamKind kind;
+  final String title;
+
+  @override
+  State<_ResultsListCore> createState() => _ResultsListCoreState();
+}
+
+class _ResultsListCoreState extends State<_ResultsListCore> {
+  final _repository = ResultRepository(ResultApi(GraphQLClient()));
+  final _expandedExamIds = <String>{};
   bool _loading = true;
   String? _error;
-  List<ExamResultSummary> _results = const [];
+  List<ExamResultGroup> _groups = const [];
 
   @override
   void initState() {
@@ -28,21 +56,24 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  Future<void> _load({bool refresh = false}) async {
+    setState(() { _loading = true; _error = null; });
     try {
-      final results = await _repository.getMyExamResults();
-      if (!mounted) return;
-      setState(() => _results = results);
+      final groups = await _repository.getGroupedResults(widget.kind, refresh: refresh);
+      if (mounted) setState(() => _groups = groups);
     } catch (_) {
-      if (!mounted) return;
-      setState(() => _error = 'Could not load results.');
+      if (mounted) setState(() => _error = 'Không thể tải kết quả.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _openResult(ExamResultSummary result) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => widget.kind == ExamKind.classTest
+          ? ClassTestResultScreen(sessionId: result.sessionId, examName: result.examName)
+          : ExamResultScreen(sessionId: result.sessionId, examName: result.examName),
+    ));
   }
 
   @override
@@ -51,200 +82,93 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: const Color(0xFFF8FAFC),
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.dark),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        title: const Text(
-          'My Results',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.dark,
-          ),
-        ),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).maybePop()),
+        title: Text(widget.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.dark)),
         centerTitle: true,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error!, style: const TextStyle(color: AppColors.muted)),
-                      const SizedBox(height: 8),
-                      TextButton(onPressed: _load, child: const Text('Retry')),
-                    ],
-                  ),
-                )
-              : _results.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No exam results yet.',
-                        style: TextStyle(color: AppColors.muted),
+              ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Text(_error!, style: const TextStyle(color: AppColors.muted)), TextButton(onPressed: () => _load(refresh: true), child: const Text('Thử lại'))]))
+              : _groups.isEmpty
+                  ? const Center(child: Text('Chưa có kết quả.', style: TextStyle(color: AppColors.muted)))
+                  : RefreshIndicator(
+                      onRefresh: () => _load(refresh: true),
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
+                        itemCount: _groups.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (_, index) {
+                          final group = _groups[index];
+                          final expanded = _expandedExamIds.contains(group.examId);
+                          return _ExamGroupCard(
+                            expanded: expanded,
+                            group: group,
+                            onOpen: _openResult,
+                            onToggle: () => setState(() {
+                              if (expanded) _expandedExamIds.remove(group.examId); else _expandedExamIds.add(group.examId);
+                            }),
+                          );
+                        },
                       ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
-                      itemCount: _results.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) => _ResultCard(_results[index]),
                     ),
     );
   }
 }
 
-extension ResultStatusMeta on ExamResultStatus {
-  String get label => switch (this) {
-        ExamResultStatus.pendingReview => 'Pending review',
-        ExamResultStatus.released => 'Released',
-        ExamResultStatus.appealed => 'Appealed',
-        ExamResultStatus.reGrading => 'Re-grading',
-        ExamResultStatus.final_ => 'Final',
-        ExamResultStatus.invalid => 'Invalid',
-        ExamResultStatus.retakeRequired => 'Retake required',
-        ExamResultStatus.passed => 'Passed',
-        ExamResultStatus.failed => 'Failed',
-      };
-  Color get fg => switch (this) {
-        ExamResultStatus.pendingReview => AppColors.warnFg,
-        ExamResultStatus.released => AppColors.success,
-        ExamResultStatus.appealed => AppColors.indigo,
-        ExamResultStatus.reGrading => AppColors.indigo,
-        ExamResultStatus.final_ => AppColors.success,
-        ExamResultStatus.invalid => AppColors.muted,
-        ExamResultStatus.retakeRequired => AppColors.warnFg,
-        ExamResultStatus.passed => AppColors.success,
-        ExamResultStatus.failed => AppColors.warnFg,
-      };
-  Color get bg => switch (this) {
-        ExamResultStatus.pendingReview => AppColors.warnBg,
-        ExamResultStatus.released => const Color(0xFFECFDF5),
-        ExamResultStatus.appealed => AppColors.chipBlueBg,
-        ExamResultStatus.reGrading => AppColors.chipBlueBg,
-        ExamResultStatus.final_ => const Color(0xFFECFDF5),
-        ExamResultStatus.invalid => AppColors.chipNeutralBg,
-        ExamResultStatus.retakeRequired => AppColors.warnBg,
-        ExamResultStatus.passed => const Color(0xFFECFDF5),
-        ExamResultStatus.failed => AppColors.warnBg,
-      };
-  IconData get icon => switch (this) {
-        ExamResultStatus.pendingReview => Icons.hourglass_empty,
-        ExamResultStatus.released => Icons.check_circle,
-        ExamResultStatus.appealed => Icons.search,
-        ExamResultStatus.reGrading => Icons.autorenew,
-        ExamResultStatus.final_ => Icons.check_circle,
-        ExamResultStatus.invalid => Icons.cancel_outlined,
-        ExamResultStatus.retakeRequired => Icons.replay,
-        ExamResultStatus.passed => Icons.check_circle,
-        ExamResultStatus.failed => Icons.cancel_outlined,
-      };
-}
-
-class _ResultCard extends StatelessWidget {
-  const _ResultCard(this.result);
-  final ExamResultSummary result;
+class _ExamGroupCard extends StatelessWidget {
+  const _ExamGroupCard({required this.group, required this.expanded, required this.onToggle, required this.onOpen});
+  final ExamResultGroup group;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final ValueChanged<ExamResultSummary> onOpen;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ResultsScreen(
-            sessionId: result.sessionId,
-            examName: result.examName,
+    final single = group.sessions.length == 1 ? group.sessions.first : null;
+    return Container(
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0))),
+      child: Column(children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: single == null ? onToggle : () => onOpen(single),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(children: [
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(group.examName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.dark)), const SizedBox(height: 6), Text(single == null ? '${group.sessions.length} lượt làm bài' : _formatDate(single.startedAt), style: const TextStyle(fontSize: 12, color: AppColors.muted))])),
+              if (single?.totalScore != null) Text(single!.totalScore!.toStringAsFixed(1), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.dark)),
+              const SizedBox(width: 8),
+              Icon(single == null ? (expanded ? Icons.expand_less : Icons.expand_more) : Icons.chevron_right, color: AppColors.muted),
+            ]),
           ),
         ),
-      ),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    result.examName,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.dark,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      _StatusPill(result.status),
-                      const SizedBox(width: 8),
-                      Text(
-                        _formatDate(result.submittedAt),
-                        style: const TextStyle(fontSize: 12, color: AppColors.muted),
-                      ),
-                    ],
-                  ),
-                ],
+        if (expanded) ...[
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+          for (int index = 0; index < group.sessions.length; index++)
+            InkWell(
+              onTap: () => onOpen(group.sessions[index]),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Lượt ${group.sessions.length - index}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.dark)), const SizedBox(height: 4), Text(_formatDate(group.sessions[index].startedAt), style: const TextStyle(fontSize: 11, color: AppColors.muted))])), _StatusPill(group.sessions[index].status), if (group.sessions[index].totalScore != null) ...[const SizedBox(width: 10), Text(group.sessions[index].totalScore!.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.w800))], const Icon(Icons.chevron_right, size: 18, color: AppColors.muted)]),
               ),
             ),
-            if (result.totalScore != null) ...[
-              const SizedBox(width: 12),
-              Text(
-                result.totalScore!.toStringAsFixed(1),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.dark,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+        ],
+      ]),
     );
   }
+}
 
-  String _formatDate(DateTime? date) => date == null
-      ? ''
-      : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+String _formatDate(DateTime? date) => date == null ? 'Chưa có thời gian' : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+extension ResultStatusMeta on ExamResultStatus {
+  String get label => switch (this) { ExamResultStatus.pendingReview => 'Chờ duyệt', ExamResultStatus.released => 'Đã công bố', ExamResultStatus.appealed => 'Đang phúc khảo', ExamResultStatus.reGrading => 'Đang chấm lại', ExamResultStatus.final_ => 'Hoàn tất', ExamResultStatus.invalid => 'Không hợp lệ', ExamResultStatus.retakeRequired => 'Cần thi lại', ExamResultStatus.passed => 'Đạt', ExamResultStatus.failed => 'Chưa đạt' };
+  Color get fg => switch (this) { ExamResultStatus.pendingReview || ExamResultStatus.retakeRequired || ExamResultStatus.failed => AppColors.warnFg, ExamResultStatus.released || ExamResultStatus.final_ || ExamResultStatus.passed => AppColors.success, ExamResultStatus.appealed || ExamResultStatus.reGrading => AppColors.indigo, ExamResultStatus.invalid => AppColors.muted };
+  Color get bg => switch (this) { ExamResultStatus.pendingReview || ExamResultStatus.retakeRequired || ExamResultStatus.failed => AppColors.warnBg, ExamResultStatus.released || ExamResultStatus.final_ || ExamResultStatus.passed => const Color(0xFFECFDF5), ExamResultStatus.appealed || ExamResultStatus.reGrading => AppColors.chipBlueBg, ExamResultStatus.invalid => AppColors.chipNeutralBg };
 }
 
 class _StatusPill extends StatelessWidget {
   const _StatusPill(this.status);
   final ExamResultStatus status;
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: status.bg,
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(status.icon, size: 13, color: status.fg),
-          const SizedBox(width: 5),
-          Text(
-            status.label,
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: status.fg,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5), decoration: BoxDecoration(color: status.bg, borderRadius: BorderRadius.circular(99)), child: Text(status.label, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: status.fg)));
 }

@@ -16,9 +16,7 @@ import 'personalize_demo_data.dart';
 ///
 /// Every method here is either a real GraphQL call or a documented
 /// client-side aggregation of a few real calls (`getDashboard`/`getProgress`)
-/// — see each method's doc comment. The only screen still on
-/// [PersonalizeDemoData] is `SessionSummaryScreen` (`getSessionSummary`),
-/// which needs a rubric/repeated-error breakdown no query returns.
+/// — see each method's doc comment.
 class PersonalizeRepository {
   PersonalizeRepository({Duration? latency, PersonalizeApi? api, ProfileApi? profileApi})
       : _latency = latency ?? const Duration(milliseconds: 400),
@@ -174,8 +172,63 @@ class PersonalizeRepository {
     return _api.submitInterestQuiz(answers.map((a) => a.toJson()).toList());
   }
 
-  Future<SessionSummary> getSessionSummary(String sessionId) =>
-      _delayed(PersonalizeDemoData.sessionSummary);
+  Future<SessionSummary> getSessionSummary(String sessionId) async {
+    final results = await Future.wait([
+      _api.getPracticeSessionDetail(sessionId),
+      _api.getPracticeHistory(50),
+    ]);
+    final detail = results[0] as Map<String, dynamic>;
+    final historyRows = (results[1] as List<Map<String, dynamic>>)
+        .map(PracticeHistoryEntry.fromJson)
+        .toList()
+      ..sort((a, b) => (a.startedAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+          .compareTo(b.startedAt ?? DateTime.fromMillisecondsSinceEpoch(0)));
+    final currentIndex = historyRows.indexWhere((entry) => entry.id == sessionId);
+    final currentScore = (detail['overallScore'] as num?)?.toDouble() ?? 0;
+    final previousScore = currentIndex > 0 ? historyRows[currentIndex - 1].overallScore : null;
+
+    final correctionCounts = <String, int>{};
+    for (final turn in (detail['turns'] as List? ?? const [])) {
+      final turnMap = turn as Map<String, dynamic>;
+      for (final correction in (turnMap['corrections'] as List? ?? const [])) {
+        final category = ((correction as Map<String, dynamic>)['category'] as String? ?? '').trim();
+        if (category.isNotEmpty) correctionCounts.update(category, (value) => value + 1, ifAbsent: () => 1);
+      }
+    }
+
+    return SessionSummary(
+      sessionId: detail['sessionId'] as String,
+      topicTitle: detail['topicName'] as String? ?? '',
+      minutes: ((detail['durationSeconds'] as num?)?.toInt() ?? 0) ~/ 60,
+      score: currentScore,
+      delta: previousScore == null ? null : currentScore - previousScore,
+      rubric: (detail['criterionScores'] as List? ?? const []).map((row) {
+        final criterion = row as Map<String, dynamic>;
+        final code = criterion['criterionCode'] as String? ?? '';
+        return SessionRubricCriterion(
+          label: _criterionLabel(code),
+          score: (criterion['score'] as num?)?.toDouble() ?? 0,
+        );
+      }).toList(),
+      repeatedErrors: correctionCounts.entries
+          .map((entry) => RepeatedError(label: _criterionLabel(entry.key), count: entry.value))
+          .toList()
+        ..sort((a, b) => b.count.compareTo(a.count)),
+    );
+  }
+
+  static String _criterionLabel(String code) {
+    switch (code.trim().toUpperCase()) {
+      case 'GRAMMAR': return 'Ngữ pháp';
+      case 'VOCABULARY': return 'Từ vựng';
+      case 'COHERENCE': return 'Mạch lạc';
+      case 'FLUENCY': return 'Độ trôi chảy';
+      case 'PRONUNCIATION': return 'Phát âm';
+      default:
+        if (code.isEmpty) return 'Khác';
+        return code.replaceAll('_', ' ').toLowerCase().split(' ').map((part) => part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}').join(' ');
+    }
+  }
 
   /// Maps to `myWeaknessProfile` — real, not `PersonalizeDemoData`.
   Future<WeaknessProfile> getWeaknessProfile() async {

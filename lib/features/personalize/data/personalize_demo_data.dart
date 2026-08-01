@@ -1,7 +1,6 @@
 import 'models/learner_profile.dart';
 import 'models/onboarding_question.dart';
 import 'models/practice_session.dart';
-import 'models/session_summary.dart';
 
 /// Hand-written stand-in for the personalized-practice backend.
 ///
@@ -120,44 +119,6 @@ abstract final class PersonalizeDemoData {
             note: 'Lần đầu bạn tự dùng đúng quá khứ mà không cần nhắc.',
           ),
         ],
-      ),
-    ],
-  );
-
-  // ── Post-session ──────────────────────────────────────────────────────────
-
-  static const sessionSummary = SessionSummary(
-    sessionId: 'session-da-lat',
-    topicTitle: 'Chuyến đi Đà Lạt',
-    minutes: 8,
-    score: 8.1,
-    delta: 0.4,
-    drillMinutes: 4,
-    rubric: [
-      RubricCriterion(label: 'Đáp ứng yêu cầu', weight: 25, score: 8.0),
-      RubricCriterion(label: 'Trôi chảy & mạch lạc', weight: 20, score: 8.4),
-      RubricCriterion(label: 'Từ vựng', weight: 20, score: 8.5),
-      RubricCriterion(label: 'Ngữ pháp', weight: 20, score: 7.2),
-      RubricCriterion(label: 'Phát âm', weight: 15, score: 7.8),
-    ],
-    repeatedErrors: [
-      RepeatedError(
-        label: 'Thì quá khứ đơn',
-        count: 4,
-        trend: ErrorTrend.topWeakness,
-        trendLabel: 'Điểm yếu #1',
-      ),
-      RepeatedError(
-        label: 'Danh từ số nhiều',
-        count: 3,
-        trend: ErrorTrend.newlySeen,
-        trendLabel: 'Mới xuất hiện',
-      ),
-      RepeatedError(
-        label: 'Ngập ngừng > 2 giây',
-        count: 2,
-        trend: ErrorTrend.improving,
-        trendLabel: '↓ giảm 30%',
       ),
     ],
   );

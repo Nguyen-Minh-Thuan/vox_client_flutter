@@ -120,7 +120,7 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
       children: [
         _ScoreHero(summary: summary),
         const SizedBox(height: 12),
-        RubricCard(rubric: summary.rubric),
+        _SessionRubricCard(rubric: summary.rubric),
         const SizedBox(height: 12),
         _RepeatedErrorsCard(errors: summary.repeatedErrors),
         const SizedBox(height: 20),
@@ -221,7 +221,7 @@ class _ScoreHero extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Container(
+          if (summary.delta != null) Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -231,22 +231,22 @@ class _ScoreHero extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  summary.delta >= 0 ? Icons.trending_up : Icons.trending_down,
+                  summary.delta! >= 0 ? Icons.trending_up : Icons.trending_down,
                   size: 16,
-                  color: summary.delta >= 0
+                  color: summary.delta! >= 0
                       ? AppColors.chipGreenFg
                       : AppColors.danger,
                 ),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
-                    l10n.pzSummaryDelta(formatDelta(summary.delta)),
+                    l10n.pzSummaryDelta(formatDelta(summary.delta!)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: summary.delta >= 0
+                      color: summary.delta! >= 0
                           ? AppColors.chipGreenFg
                           : AppColors.danger,
                     ),
@@ -276,6 +276,11 @@ class _RepeatedErrorsCard extends StatelessWidget {
         children: [
           SectionLabel(l10n.pzSummaryRepeatedErrors),
           const SizedBox(height: 12),
+          if (errors.isEmpty)
+            const Text(
+              'Không ghi nhận lỗi lặp lại trong phiên này.',
+              style: TextStyle(fontSize: 13, color: AppColors.muted),
+            ),
           for (int i = 0; i < errors.length; i++) ...[
             if (i > 0) const SizedBox(height: 10),
             _ErrorRow(error: errors[i]),
@@ -292,30 +297,12 @@ class _ErrorRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (bg, fg, trendColor) = switch (error.trend) {
-      ErrorTrend.topWeakness => (
-          AppColors.dangerBg,
-          AppColors.danger,
-          AppColors.chipOrangeFg,
-        ),
-      ErrorTrend.newlySeen => (
-          AppColors.chipOrangeBg,
-          AppColors.chipOrangeFg,
-          AppColors.muted,
-        ),
-      ErrorTrend.improving => (
-          AppColors.warnBg,
-          AppColors.warnFg,
-          AppColors.chipGreenFg,
-        ),
-    };
-
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: bg,
+            color: AppColors.chipOrangeBg,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -323,7 +310,7 @@ class _ErrorRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w800,
-              color: fg,
+              color: AppColors.chipOrangeFg,
             ),
           ),
         ),
@@ -338,16 +325,48 @@ class _ErrorRow extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 8),
-        Text(
-          error.trendLabel,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: trendColor,
-          ),
-        ),
       ],
+    );
+  }
+}
+
+class _SessionRubricCard extends StatelessWidget {
+  const _SessionRubricCard({required this.rubric});
+
+  final List<SessionRubricCriterion> rubric;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      decoration: cardDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 12, 0, 6),
+            child: SectionLabel(l10n.pzSummaryRubric),
+          ),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          if (rubric.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Text('Chưa có điểm chi tiết theo tiêu chí.', style: TextStyle(fontSize: 13, color: AppColors.muted)),
+            ),
+          for (int i = 0; i < rubric.length; i++) ...[
+            if (i > 0) const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            Padding(
+              padding: EdgeInsets.fromLTRB(0, 9, 0, i == rubric.length - 1 ? 12 : 9),
+              child: MeterRow(
+                label: rubric[i].label,
+                ratio: (rubric[i].score / 10).clamp(0, 1),
+                value: rubric[i].score.toStringAsFixed(1),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

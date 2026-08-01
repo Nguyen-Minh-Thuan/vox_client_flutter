@@ -8,6 +8,7 @@ import '../../../core/network/graphql_client.dart';
 import '../data/appeal_api.dart';
 import '../data/appeal_repository.dart';
 import '../data/models/appeal_summary.dart';
+import 'appeal_detail_screen.dart';
 
 /// Appeals & Re-evaluation list — formal requests for score re-checks.
 class AppealsScreen extends StatefulWidget {
@@ -128,7 +129,12 @@ class _AppealsScreenState extends State<AppealsScreen> {
           )
         else
           for (int i = 0; i < _appeals.length; i++) ...[
-            _AppealCard(_appeals[i]),
+            _AppealCard(
+              _appeals[i],
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => AppealDetailScreen(appealId: _appeals[i].id),
+              )),
+            ),
             if (i != _appeals.length - 1) const SizedBox(height: 12),
           ],
       ],
@@ -205,12 +211,16 @@ extension _StatusMeta on String {
 }
 
 class _AppealCard extends StatelessWidget {
-  const _AppealCard(this.a);
+  const _AppealCard(this.a, {required this.onTap});
   final AppealSummary a;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -267,13 +277,6 @@ class _AppealCard extends StatelessWidget {
               children: [
                 if (a.originalScore != null)
                   _ScoreChip(label: 'Original', value: a.originalScore!),
-                if (a.reviewerCount > 0) ...[
-                  const SizedBox(width: 14),
-                  Text(
-                    '${a.doneCount}/${a.reviewerCount} reviewed',
-                    style: const TextStyle(fontSize: 12, color: AppColors.muted),
-                  ),
-                ],
                 const Spacer(),
                 Text(
                   DateFormat('MMM d, yyyy').format(a.requestedAt),
@@ -294,6 +297,7 @@ class _AppealCard extends StatelessWidget {
             ),
           ],
         ],
+      ),
       ),
     );
   }

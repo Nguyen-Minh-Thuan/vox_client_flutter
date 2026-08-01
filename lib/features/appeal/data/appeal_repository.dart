@@ -1,5 +1,6 @@
 import 'appeal_api.dart';
 import 'models/appeal_summary.dart';
+import 'models/appeal_detail.dart';
 
 class AppealRepository {
   AppealRepository(this._appealApi);
@@ -20,4 +21,6 @@ class AppealRepository {
       );
 
   Future<List<AppealSummary>> getMyAppeals() => _appealApi.getMyAppeals();
+
+  Future<AppealDetail> getAppeal(String id) => _appealApi.getAppeal(id);
 }
