@@ -313,18 +313,10 @@ class PersonalizeApi {
     return data['pickRandomTopic'] as Map<String, dynamic>;
   }
 
-  /// Maps to `submitFlsaSelfReport(answers)` — exactly 3-4 Likert(1-5) answers.
-  Future<Map<String, dynamic>> submitFlsaSelfReport(List<int> answers) async {
-    final data = await _client.query('''
-      mutation SubmitFlsaSelfReport(\$answers: [Int!]!) {
-        submitFlsaSelfReport(answers: \$answers) {
-          flsaScore
-        }
-      }
-    ''', variables: {'answers': answers});
-
-    return data['submitFlsaSelfReport'] as Map<String, dynamic>;
-  }
+  // FLAS/self-report onboarding step removed client-side (2026-08-02, no
+  // question-generation mechanism ever consumed flsaScore — see
+  // onboarding_flow.dart doc comment). The `submitFlsaSelfReport` mutation
+  // still exists on the backend if this needs to be re-added later.
 
   /// Maps to `myWeaknessProfile`.
   Future<Map<String, dynamic>> getWeaknessProfile() async {

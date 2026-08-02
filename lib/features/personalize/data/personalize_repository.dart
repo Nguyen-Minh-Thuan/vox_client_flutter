@@ -10,7 +10,6 @@ import 'models/progress_report.dart';
 import 'models/session_summary.dart';
 import 'models/weakness.dart';
 import 'personalize_api.dart';
-import 'personalize_demo_data.dart';
 
 /// Data source for the personalized-practice feature.
 ///
@@ -18,17 +17,12 @@ import 'personalize_demo_data.dart';
 /// client-side aggregation of a few real calls (`getDashboard`/`getProgress`)
 /// — see each method's doc comment.
 class PersonalizeRepository {
-  PersonalizeRepository({Duration? latency, PersonalizeApi? api, ProfileApi? profileApi})
-      : _latency = latency ?? const Duration(milliseconds: 400),
-        _api = api ?? PersonalizeApi(GraphQLClient()),
+  PersonalizeRepository({PersonalizeApi? api, ProfileApi? profileApi})
+      : _api = api ?? PersonalizeApi(GraphQLClient()),
         _profileApi = profileApi ?? ProfileApi(GraphQLClient());
 
-  final Duration _latency;
   final PersonalizeApi _api;
   final ProfileApi _profileApi;
-
-  Future<T> _delayed<T>(T value) =>
-      Future<T>.delayed(_latency, () => value);
 
   /// No single query returns this shape -- assembled from real
   /// `myPracticeDashboardStats`, `practiceTopicOffers` (bucket FOR_YOU),
@@ -235,13 +229,6 @@ class PersonalizeRepository {
     final json = await _api.getWeaknessProfile();
     return WeaknessProfile.fromJson(json);
   }
-
-  Future<List<OnboardingQuestion>> getOnboardingQuestions() =>
-      _delayed(PersonalizeDemoData.onboardingQuestions);
-
-  /// Maps to `submitFlsaSelfReport(answers)`.
-  Future<void> submitFlsaSelfReport(List<int> answers) =>
-      _api.submitFlsaSelfReport(answers);
 
   /// Maps to `saveTopic(topicId)`.
   Future<void> saveTopic(String topicId) => _api.saveTopic(topicId);

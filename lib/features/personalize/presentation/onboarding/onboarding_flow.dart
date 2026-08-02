@@ -6,21 +6,24 @@ import '../../../../l10n/app_localizations.dart';
 import '../../data/models/onboarding_question.dart';
 import '../../data/personalize_repository.dart';
 import '../personalize_widgets.dart';
-import 'flas_quiz_step.dart';
 import 'interest_quiz_step.dart';
 
 /// Design `1a` — the questionnaire that builds the learner profile.
 ///
-/// Two steps: the FLAS / learning-style quiz (still local-only, not yet wired
-/// to `submitFlsaSelfReport`), then the REAL forced-choice interest quiz
-/// (`interestQuizItems`/`submitInterestQuiz` -- NOT `PersonalizeDemoData`,
-/// this is what actually seeds `dimension_interest_score`). The old fake
-/// topic-chip/goal-tile step and the fabricated CEFR/roadmap profile summary
-/// screen (`LearnerProfileStep`) had no real backend behind them and were
-/// dropped rather than wired to fake data.
+/// FLAS/self-report step removed by product decision (2026-08-02) -- straight
+/// to the REAL forced-choice interest quiz (`interestQuizItems`/
+/// `submitInterestQuiz`, NOT `PersonalizeDemoData`, this is what actually
+/// seeds `dimension_interest_score`). The old fake topic-chip/goal-tile step
+/// and the fabricated CEFR/roadmap profile summary screen (`LearnerProfileStep`)
+/// had no real backend behind them and were dropped rather than wired to fake
+/// data.
 ///
-/// Pops `true` once the quiz has been submitted (or skipped because there was
-/// nothing to answer).
+/// Pops `true` once the quiz has been submitted. If `interestQuizItems` comes
+/// back empty (LLM/network hiccup -- the backend's own fallback to the static
+/// seed pool means a genuinely-empty result should never happen in practice),
+/// this shows a retry state instead of silently finishing: silently marking
+/// onboarding "done" here would permanently strand the student with an empty
+/// interest vector on this device, with no automatic way back in.
 class OnboardingFlow extends StatefulWidget {
   const OnboardingFlow({super.key});
 
@@ -35,24 +38,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   bool _loading = true;
   String? _error;
 
-  List<OnboardingQuestion> _questions = const [];
   List<InterestQuizItem> _quizItems = const [];
-
-  /// Question id → chosen option index (FLSA step, local only for now).
-  final Map<String, int> _answers = {};
 
   /// Quiz item id → chosen statement index.
   final Map<String, int> _mostByItem = {};
   final Map<String, int> _leastByItem = {};
 
-  /// 0..questions.length-1 → FLSA quiz; questions.length..+quizItems.length-1
-  /// → interest quiz, one triplet per step.
   int _step = 0;
   bool _submitting = false;
-
-  int get _quizStartStep => _questions.length;
-  int get _totalSteps => _questions.length + _quizItems.length;
-  bool get _onQuizItem => _step >= _quizStartStep && _quizItems.isNotEmpty;
 
   @override
   void initState() {
@@ -66,13 +59,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       _error = null;
     });
     try {
-      final questions = await _repository.getOnboardingQuestions();
       final quizItems = await _repository.getInterestQuizItems();
       if (!mounted) return;
-      setState(() {
-        _questions = questions;
-        _quizItems = quizItems;
-      });
+      setState(() => _quizItems = quizItems);
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = '$e');
@@ -89,40 +78,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     setState(() => _step--);
   }
 
-  Future<void> _next() async {
-    final leavingFlsa = _questions.isNotEmpty && _step == _questions.length - 1;
-    if (leavingFlsa && !await _submitFlsa()) {
-      return;
-    }
-    if (_step < _totalSteps - 1) {
+  void _next() {
+    if (_step < _quizItems.length - 1) {
       setState(() => _step++);
       return;
     }
-    if (_quizItems.isEmpty) {
-      await _finish();
-      return;
-    }
-    await _submitQuiz();
-  }
-
-  /// Maps to `submitFlsaSelfReport` -- option index (0..4) shown by
-  /// `FlasQuizStep` becomes a 1..5 Likert value. Returns `false` (and shows
-  /// the error state) if the real submission failed, so `_next()` doesn't
-  /// advance past unsent answers.
-  Future<bool> _submitFlsa() async {
-    setState(() => _submitting = true);
-    try {
-      final answers = [
-        for (final question in _questions) (_answers[question.id] ?? 0) + 1,
-      ];
-      await _repository.submitFlsaSelfReport(answers);
-      return true;
-    } catch (e) {
-      if (mounted) setState(() => _error = '$e');
-      return false;
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
+    _submitQuiz();
   }
 
   Future<void> _submitQuiz() async {
@@ -167,60 +128,47 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         body: PersonalizeErrorView(detail: _error, onRetry: _load),
       );
     }
-    if (_totalSteps == 0) {
-      // Nothing to answer at all (no FLSA questions, no quiz items) -- don't
-      // show an empty questionnaire, just finish immediately.
-      _finish();
-      return const Scaffold(body: SizedBox.shrink());
+    if (_quizItems.isEmpty) {
+      // Never silently finish on empty -- see class doc comment. Let the
+      // student retry instead of getting permanently stuck with no vector.
+      return Scaffold(
+        appBar: AppBar(),
+        body: PersonalizeErrorView(onRetry: _load),
+      );
     }
 
+    final item = _quizItems[_step];
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             _OnboardingHeader(
-              title: _onQuizItem
-                  ? l10n.pzInterestQuizTitle
-                  : l10n.pzOnboardingQuizTitle,
-              counter: l10n.pzOnboardingProgress(_step + 1, _totalSteps),
-              progress: (_step + 1) / _totalSteps,
+              title: l10n.pzInterestQuizTitle,
+              counter: l10n.pzOnboardingProgress(_step + 1, _quizItems.length),
+              progress: (_step + 1) / _quizItems.length,
               onBack: _back,
             ),
             Expanded(
-              child: _onQuizItem
-                  ? Builder(builder: (context) {
-                      final item = _quizItems[_step - _quizStartStep];
-                      return InterestQuizStep(
-                        item: item,
-                        mostIndex: _mostByItem[item.id],
-                        leastIndex: _leastByItem[item.id],
-                        canGoBack: _step > 0,
-                        onPickMost: (index) => setState(() {
-                          _mostByItem[item.id] = index;
-                          if (_leastByItem[item.id] == index) {
-                            _leastByItem.remove(item.id);
-                          }
-                        }),
-                        onPickLeast: (index) => setState(() {
-                          _leastByItem[item.id] = index;
-                          if (_mostByItem[item.id] == index) {
-                            _mostByItem.remove(item.id);
-                          }
-                        }),
-                        onBack: _back,
-                        onContinue: _next,
-                      );
-                    })
-                  : FlasQuizStep(
-                      question: _questions[_step],
-                      selectedIndex: _answers[_questions[_step].id],
-                      canGoBack: _step > 0,
-                      onSelect: (index) => setState(
-                        () => _answers[_questions[_step].id] = index,
-                      ),
-                      onBack: _back,
-                      onContinue: _next,
-                    ),
+              child: InterestQuizStep(
+                item: item,
+                mostIndex: _mostByItem[item.id],
+                leastIndex: _leastByItem[item.id],
+                canGoBack: _step > 0,
+                onPickMost: (index) => setState(() {
+                  _mostByItem[item.id] = index;
+                  if (_leastByItem[item.id] == index) {
+                    _leastByItem.remove(item.id);
+                  }
+                }),
+                onPickLeast: (index) => setState(() {
+                  _leastByItem[item.id] = index;
+                  if (_mostByItem[item.id] == index) {
+                    _mostByItem.remove(item.id);
+                  }
+                }),
+                onBack: _back,
+                onContinue: _next,
+              ),
             ),
           ],
         ),

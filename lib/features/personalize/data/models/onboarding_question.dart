@@ -1,46 +1,6 @@
-/// Which part of the onboarding questionnaire a question belongs to.
-enum OnboardingCategory { flas, learningStyle }
-
-/// One single-choice question in the onboarding questionnaire.
-class OnboardingQuestion {
-  final String id;
-  final OnboardingCategory category;
-
-  /// Chip caption above the prompt, e.g. "THÁI ĐỘ & ĐỘNG LỰC (FLAS)".
-  final String categoryLabel;
-  final String prompt;
-  final List<String> options;
-
-  const OnboardingQuestion({
-    required this.id,
-    required this.category,
-    required this.categoryLabel,
-    required this.prompt,
-    required this.options,
-  });
-
-  factory OnboardingQuestion.fromJson(Map<String, dynamic> json) {
-    return OnboardingQuestion(
-      id: json['id'] as String,
-      category: _categoryFromJson(json['category'] as String?),
-      categoryLabel: json['categoryLabel'] as String? ?? '',
-      prompt: json['prompt'] as String,
-      options: (json['options'] as List<dynamic>? ?? const [])
-          .map((e) => e as String)
-          .toList(),
-    );
-  }
-
-  static OnboardingCategory _categoryFromJson(String? value) {
-    switch (value) {
-      case 'LEARNING_STYLE':
-        return OnboardingCategory.learningStyle;
-      case 'FLAS':
-      default:
-        return OnboardingCategory.flas;
-    }
-  }
-}
+// FLAS/self-report onboarding question model removed client-side
+// (2026-08-02) -- see onboarding_flow.dart doc comment. The backend
+// `submitFlsaSelfReport` mutation still exists if this needs to come back.
 
 /// A selectable topic chip on the interests step.
 class InterestChoice {
