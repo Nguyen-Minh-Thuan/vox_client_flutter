@@ -13,7 +13,10 @@ import 'personalize_widgets.dart';
 /// Pops the [PracticeTopic] the learner picked so the caller decides how to
 /// open the session.
 class PracticeTopicsScreen extends StatefulWidget {
-  const PracticeTopicsScreen({super.key, this.initialFilter = TopicFilter.forYou});
+  const PracticeTopicsScreen({
+    super.key,
+    this.initialFilter = TopicFilter.forYou,
+  });
 
   final TopicFilter initialFilter;
 
@@ -88,10 +91,8 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
               reasons: t.reasons,
               focusTags: t.focusTags,
               icon: t.icon,
-              buckets: {
-                ...t.buckets,
-                if (!isSaved) TopicFilter.saved,
-              }..removeWhere((b) => isSaved && b == TopicFilter.saved),
+              buckets: {...t.buckets, if (!isSaved) TopicFilter.saved}
+                ..removeWhere((b) => isSaved && b == TopicFilter.saved),
             )
           else
             t,
@@ -173,20 +174,80 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
   }
 
   Widget _buildBody(AppLocalizations l10n) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    // Nói rõ đang chờ CÁI GÌ thay vì để một vòng xoay trống: khi kho chủ đề còn thưa, lượt này
+    // phải nhờ AI soạn chủ đề mới nên có thể mất hàng chục giây. Vòng xoay trống ở khoảng thời
+    // gian đó khiến người dùng tưởng ứng dụng treo và thoát ra giữa chừng.
+    if (_loading) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 18),
+            Text(
+              l10n.pzPreparingTopics,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.ink,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                l10n.pzPreparingHint,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     if (_error != null) {
       return PersonalizeErrorView(detail: _error, onRetry: _load);
     }
 
     if (_topics.isEmpty) {
+      // Rỗng ngay sau khi làm xong khảo sát KHÔNG phải lỗi -- backend đã nhận và đang soạn chủ
+      // đề chạy nền (xem TopicOfferBackfillService). Trước đây chỗ này chờ LLM ngay trong
+      // request nên lượt đầu luôn timeout; giờ vào thẳng màn này rồi tải lại sau.
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            l10n.pzTopicsEmpty,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: AppColors.textFaint),
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.auto_awesome, size: 34, color: AppColors.indigo),
+              const SizedBox(height: 14),
+              Text(
+                l10n.pzTopicsPreparing,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.pzTopicsPreparingBody,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.45,
+                  color: AppColors.muted,
+                ),
+              ),
+              const SizedBox(height: 18),
+              OutlinedButton.icon(
+                onPressed: _load,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: Text(l10n.pzTopicsRefresh),
+              ),
+            ],
           ),
         ),
       );
@@ -278,8 +339,11 @@ class _SearchField extends StatelessWidget {
                 ? const SizedBox.shrink()
                 : InkWell(
                     onTap: onClear,
-                    child: const Icon(Icons.close,
-                        size: 18, color: Color(0xFF999999)),
+                    child: const Icon(
+                      Icons.close,
+                      size: 18,
+                      color: Color(0xFF999999),
+                    ),
                   ),
           ),
         ],
@@ -354,8 +418,7 @@ class _PriorityCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.indigo,
                   borderRadius: BorderRadius.circular(99),
@@ -414,8 +477,7 @@ class _PriorityCard extends StatelessWidget {
             spacing: 6,
             runSpacing: 6,
             children: [
-              _WhiteChip(l10n.pzMinutes(topic.minutes)),
-              _WhiteChip(levelLabel(l10n, topic.level)),
+              _WhiteChip(l10n.pzLevelWithPrefix(levelLabel(l10n, topic.level))),
               for (final tag in topic.focusTags)
                 _WhiteChip(tag, color: AppColors.chipOrangeFg),
             ],
@@ -528,8 +590,11 @@ class _TopicRow extends StatelessWidget {
                 color: AppColors.fieldBg,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(iconForName(topic.icon),
-                  size: 22, color: const Color(0xFF555555)),
+              child: Icon(
+                iconForName(topic.icon),
+                size: 22,
+                color: const Color(0xFF555555),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -556,8 +621,7 @@ class _TopicRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '${l10n.pzMinutes(topic.minutes)} · '
-                    '${levelLabel(l10n, topic.level)}',
+                    l10n.pzLevelWithPrefix(levelLabel(l10n, topic.level)),
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textFaint,
@@ -601,8 +665,11 @@ class _FooterTip extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.tips_and_updates_outlined,
-              size: 18, color: AppColors.indigo),
+          const Icon(
+            Icons.tips_and_updates_outlined,
+            size: 18,
+            color: AppColors.indigo,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text.rich(

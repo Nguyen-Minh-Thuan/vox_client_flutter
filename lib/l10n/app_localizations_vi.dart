@@ -342,6 +342,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get navPractice => 'Luyện nói';
 
   @override
+  String get pzPreparingQuestions =>
+      'Đang chuẩn bị câu hỏi riêng cho chủ đề này…\nMất khoảng 10-20 giây cho lần đầu.';
+
+  @override
   String get pzRetry => 'Thử lại';
 
   @override
@@ -365,15 +369,18 @@ class AppLocalizationsVi extends AppLocalizations {
   String get pzLevelAdvanced => 'Nâng cao';
 
   @override
+  String pzLevelWithPrefix(String level) {
+    return 'Mức độ: $level';
+  }
+
+  @override
   String get pzHomeSessionToday => 'PHIÊN HÔM NAY';
 
   @override
   String get pzHomePersonalizedBadge => 'CÁ NHÂN HOÁ';
 
   @override
-  String pzHomeSessionMeta(int minutes) {
-    return '$minutes phút · hội thoại 1-1 · trọng tâm:';
-  }
+  String get pzHomeSessionMeta => 'Hội thoại 1-1 · trọng tâm:';
 
   @override
   String get pzHomeStartSpeaking => 'Bắt đầu nói';
@@ -402,6 +409,22 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pzHomeSuggestions => 'Gợi ý cho bạn';
+
+  @override
+  String get pzPreparingTopics => 'Đang tìm chủ đề hợp với bạn…';
+
+  @override
+  String get pzPreparingHint => 'Lần đầu có thể lâu hơn chút vì đang soạn mới.';
+
+  @override
+  String get pzTopicsPreparing => 'Hệ thống đang tổng hợp thông tin của bạn';
+
+  @override
+  String get pzTopicsPreparingBody =>
+      'Chủ đề riêng đang được soạn dựa trên bài khảo sát vừa làm. Quay lại sau 1-2 phút nhé.';
+
+  @override
+  String get pzTopicsRefresh => 'Tải lại';
 
   @override
   String get pzTopicsTitle => 'Chủ đề luyện nói';
@@ -453,6 +476,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pzTopicsWhy => 'Vì sao?';
+
+  @override
+  String pzSessionSpoken(String spoken, String budget) {
+    return 'Đã nói · $spoken / $budget';
+  }
 
   @override
   String pzSessionLive(String time) {
@@ -545,6 +573,18 @@ class AppLocalizationsVi extends AppLocalizations {
   String get pzSummaryRubricLegend => 'trọng số · điểm /10';
 
   @override
+  String get pzSummaryPronunciation => 'Từ phát âm chưa đạt';
+
+  @override
+  String get pzSummaryPronunciationEmpty =>
+      'Không có từ nào bị chấm dưới ngưỡng trong buổi này.';
+
+  @override
+  String pzSummaryWorstPhoneme(String phoneme, String percent) {
+    return 'Âm /$phoneme/ · $percent%';
+  }
+
+  @override
   String get pzSummaryRepeatedErrors => 'Lỗi lặp lại trong buổi';
 
   @override
@@ -554,6 +594,12 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pzSummaryReplay => 'Nghe lại ghi âm';
+
+  @override
+  String get pzLearningProfile => 'Hồ sơ học tập';
+
+  @override
+  String get pzLearningProfileHint => 'Điểm trung bình và các buổi gần đây';
 
   @override
   String get pzWeaknessTitle => 'Hồ sơ điểm yếu';
@@ -585,13 +631,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get pzWeaknessExpression => 'Diễn đạt';
 
   @override
-  String get pzWeaknessSevere => 'NẶNG';
+  String get pzWeaknessSevere => 'ƯU TIÊN CAO';
 
   @override
-  String get pzWeaknessMedium => 'VỪA';
+  String get pzWeaknessMedium => 'ƯU TIÊN VỪA';
 
   @override
-  String get pzWeaknessMild => 'NHẸ';
+  String get pzWeaknessMild => 'CHƯA CẦN';
 
   @override
   String get pzHistoryTitle => 'Lịch sử luyện tập';

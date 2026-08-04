@@ -207,9 +207,7 @@ class _GoalTile extends StatelessWidget {
                     goal.subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: selected
-                          ? AppColors.muted
-                          : AppColors.textFaint,
+                      color: selected ? AppColors.muted : AppColors.textFaint,
                     ),
                   ),
                 ],

@@ -18,9 +18,14 @@ class GraphQLClient {
             Dio(
               BaseOptions(
                 baseUrl: ApiEndpoints.graphqlBaseUrl,
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 15),
-                sendTimeout: const Duration(seconds: 15),
+                // 30s chứ không 15s: vài mutation phải chờ backend nhờ AI làm việc thật --
+                // dựng đề luyện có thể phải sinh câu mới (10-40s ở đường chậm), quiz sở thích
+                // sinh riêng cho học sinh mất 12-22s. 15s cắt ngang giữa chừng thì client báo
+                // lỗi trong khi backend vẫn đang làm và vẫn ghi kết quả xuống DB -- người dùng
+                // thấy hỏng còn dữ liệu thì có, kiểu sai lệch khó lần nhất.
+                connectTimeout: const Duration(seconds: 30),
+                receiveTimeout: const Duration(seconds: 30),
+                sendTimeout: const Duration(seconds: 30),
                 contentType: Headers.jsonContentType,
                 responseType: ResponseType.json,
               ),

@@ -56,10 +56,10 @@ class InterestQuizAnswer {
   });
 
   Map<String, dynamic> toJson() => {
-        'itemId': itemId,
-        'mostStatementIndex': mostStatementIndex,
-        'leastStatementIndex': leastStatementIndex,
-      };
+    'itemId': itemId,
+    'mostStatementIndex': mostStatementIndex,
+    'leastStatementIndex': leastStatementIndex,
+  };
 }
 
 /// One of the main goals the learner picks during onboarding.

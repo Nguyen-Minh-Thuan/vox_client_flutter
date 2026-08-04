@@ -59,6 +59,13 @@ class PracticeTurn {
   /// The correction card rendered under a student turn.
   final List<Correction> corrections;
 
+  /// Server đã chấm xong lượt này chưa.
+  ///
+  /// KHÁC với `corrections.isNotEmpty`: nói đúng hết cũng được chấm, chỉ là danh sách sửa
+  /// rỗng. Không có cờ này thì không phân biệt được "chưa chấm xong" với "chấm rồi, không
+  /// có gì sai" -- và thẻ sẽ im lặng ở cả hai trường hợp.
+  final bool correctionsArrived;
+
   const PracticeTurn({
     required this.id,
     required this.turnOrder,
@@ -67,6 +74,7 @@ class PracticeTurn {
     this.score,
     this.spans = const [],
     this.corrections = const [],
+    this.correctionsArrived = false,
   });
 
   factory PracticeTurn.fromJson(Map<String, dynamic> json) {
@@ -140,6 +148,15 @@ class Correction {
   /// 0..1 accuracy for pronunciation rows, which show a meter instead.
   final double? accuracy;
 
+  /// Âm vị phát âm kém nhất trong từ, ví dụ `z` -> hiện thành `/z/`.
+  final String? worstPhoneme;
+
+  /// Gợi ý NÂNG CẤP cách nói, không phải lỗi sai.
+  ///
+  /// Cần tách bạch vì cách hiển thị phải khác: câu của học sinh vốn đã đúng, gạch chân đỏ
+  /// và gọi là "lỗi" sẽ nói sai điều mà hệ thống muốn truyền đạt.
+  final bool isUpgrade;
+
   const Correction({
     required this.type,
     this.before,
@@ -148,6 +165,8 @@ class Correction {
     required this.note,
     this.repeatCount,
     this.accuracy,
+    this.worstPhoneme,
+    this.isUpgrade = false,
   });
 
   factory Correction.fromJson(Map<String, dynamic> json) {
@@ -159,6 +178,8 @@ class Correction {
       note: json['note'] as String? ?? '',
       repeatCount: (json['repeatCount'] as num?)?.toInt(),
       accuracy: (json['accuracy'] as num?)?.toDouble(),
+      worstPhoneme: json['worstPhoneme'] as String?,
+      isUpgrade: json['isUpgrade'] as bool? ?? false,
     );
   }
 }

@@ -24,7 +24,6 @@ class _InterestsScreenState extends State<InterestsScreen> {
   bool _loading = true;
   String? _error;
   List<Interest> _interests = const [];
-  bool _autoUpdate = true;
 
   @override
   void initState() {
@@ -39,11 +38,9 @@ class _InterestsScreenState extends State<InterestsScreen> {
     });
     try {
       final interests = await _repository.getInterests();
-      final autoUpdate = await _repository.getInterestAutoUpdateEnabled();
       if (!mounted) return;
       setState(() {
         _interests = interests;
-        _autoUpdate = autoUpdate;
       });
     } catch (e) {
       if (!mounted) return;
@@ -54,7 +51,9 @@ class _InterestsScreenState extends State<InterestsScreen> {
   }
 
   Future<void> _acceptDiscovery(Interest interest) async {
-    setState(() => _interests = _interests.where((i) => i.id != interest.id).toList());
+    setState(
+      () => _interests = _interests.where((i) => i.id != interest.id).toList(),
+    );
     try {
       await _repository.respondToTopicSuggestion(interest.id, true);
     } catch (_) {
@@ -63,22 +62,13 @@ class _InterestsScreenState extends State<InterestsScreen> {
   }
 
   Future<void> _dismissDiscovery(Interest interest) async {
-    setState(() => _interests = _interests.where((i) => i.id != interest.id).toList());
+    setState(
+      () => _interests = _interests.where((i) => i.id != interest.id).toList(),
+    );
     try {
       await _repository.respondToTopicSuggestion(interest.id, false);
     } catch (_) {
       if (mounted) _load();
-    }
-  }
-
-  Future<void> _toggleAutoUpdate(bool value) async {
-    final previous = _autoUpdate;
-    setState(() => _autoUpdate = value);
-    try {
-      final saved = await _repository.setInterestAutoUpdate(value);
-      if (mounted) setState(() => _autoUpdate = saved);
-    } catch (_) {
-      if (mounted) setState(() => _autoUpdate = previous);
     }
   }
 
@@ -89,8 +79,10 @@ class _InterestsScreenState extends State<InterestsScreen> {
       appBar: AppBar(title: Text(l10n.pzInterestsTitle)),
       body: switch ((_loading, _error)) {
         (true, _) => const Center(child: CircularProgressIndicator()),
-        (_, final String error) =>
-          PersonalizeErrorView(detail: error, onRetry: _load),
+        (_, final String error) => PersonalizeErrorView(
+          detail: error,
+          onRetry: _load,
+        ),
         _ => _buildBody(l10n),
       },
     );
@@ -100,10 +92,12 @@ class _InterestsScreenState extends State<InterestsScreen> {
     final discovered = _interests
         .where((i) => i.status == InterestStatus.discovered)
         .toList();
-    final active =
-        _interests.where((i) => i.status == InterestStatus.active).toList();
-    final cooling =
-        _interests.where((i) => i.status == InterestStatus.cooling).toList();
+    final active = _interests
+        .where((i) => i.status == InterestStatus.active)
+        .toList();
+    final cooling = _interests
+        .where((i) => i.status == InterestStatus.cooling)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -134,10 +128,6 @@ class _InterestsScreenState extends State<InterestsScreen> {
           ],
           const SizedBox(height: 8),
         ],
-        _AutoUpdateTile(
-          value: _autoUpdate,
-          onChanged: _toggleAutoUpdate,
-        ),
         const SizedBox(height: 20),
         Text(
           l10n.pzInterestsFooter,
@@ -356,59 +346,8 @@ class _CoolingRow extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             interest.detail,
-            style: const TextStyle(
-              fontSize: 11.5,
-              color: AppColors.textGhost,
-            ),
+            style: const TextStyle(fontSize: 11.5, color: AppColors.textGhost),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AutoUpdateTile extends StatelessWidget {
-  const _AutoUpdateTile({required this.value, required this.onChanged});
-
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-      decoration: BoxDecoration(
-        color: AppColors.headerBg,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.pzInterestsAutoUpdate,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.ink,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  l10n.pzInterestsAutoUpdateBody,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    height: 1.45,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(value: value, onChanged: onChanged),
         ],
       ),
     );

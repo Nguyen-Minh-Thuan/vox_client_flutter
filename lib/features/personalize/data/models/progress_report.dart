@@ -9,6 +9,10 @@ const _rangeDays = {
   ProgressRange.all: 36500,
 };
 
+extension ProgressRangeDays on ProgressRange {
+  int get days => _rangeDays[this]!;
+}
+
 /// One bar in the average-score chart -- one real completed session.
 class ProgressPoint {
   final String label;
@@ -58,10 +62,8 @@ class ProgressReport {
     this.recentSessions = const [],
   });
 
-  double get peak => points.fold<double>(
-        1,
-        (max, p) => p.value > max ? p.value : max,
-      );
+  double get peak =>
+      points.fold<double>(1, (max, p) => p.value > max ? p.value : max);
 
   factory ProgressReport.fromHistory(
     List<PracticeHistoryEntry> entries,
@@ -75,23 +77,30 @@ class ProgressReport {
     bool isScored(PracticeHistoryEntry e) =>
         e.overallScore != null && e.startedAt != null;
 
-    final current = entries
-        .where((e) => isScored(e) && e.startedAt!.isAfter(cutoff))
-        .toList()
-      ..sort((a, b) => a.startedAt!.compareTo(b.startedAt!));
+    final current =
+        entries
+            .where((e) => isScored(e) && e.startedAt!.isAfter(cutoff))
+            .toList()
+          ..sort((a, b) => a.startedAt!.compareTo(b.startedAt!));
     final previous = entries.where(
-      (e) => isScored(e) && e.startedAt!.isAfter(previousCutoff) && e.startedAt!.isBefore(cutoff),
+      (e) =>
+          isScored(e) &&
+          e.startedAt!.isAfter(previousCutoff) &&
+          e.startedAt!.isBefore(cutoff),
     );
 
     double average(Iterable<PracticeHistoryEntry> items) {
       if (items.isEmpty) return 0;
-      return items.map((e) => e.overallScore!).reduce((a, b) => a + b) / items.length;
+      return items.map((e) => e.overallScore!).reduce((a, b) => a + b) /
+          items.length;
     }
 
     final averageScore = average(current);
     final delta = previous.isEmpty ? 0.0 : averageScore - average(previous);
 
-    final chartEntries = current.length > 10 ? current.sublist(current.length - 10) : current;
+    final chartEntries = current.length > 10
+        ? current.sublist(current.length - 10)
+        : current;
     final points = [
       for (final e in chartEntries)
         ProgressPoint(
@@ -106,7 +115,8 @@ class ProgressReport {
         SessionHistoryItem(
           id: e.id,
           title: e.topicName,
-          subtitle: '${e.startedAt!.day}/${e.startedAt!.month}/${e.startedAt!.year}',
+          subtitle:
+              '${e.startedAt!.day}/${e.startedAt!.month}/${e.startedAt!.year}',
           score: e.overallScore!,
         ),
     ];

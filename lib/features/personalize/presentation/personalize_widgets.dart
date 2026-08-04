@@ -25,7 +25,9 @@ class PersonalizeErrorView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              detail == null ? l10n.pzLoadError : '${l10n.pzLoadError}\n$detail',
+              detail == null
+                  ? l10n.pzLoadError
+                  : '${l10n.pzLoadError}\n$detail',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 13, color: AppColors.textFaint),
             ),
@@ -90,12 +92,14 @@ class RubricCard extends StatelessWidget {
               child: MeterRow(
                 label: rubric[i].label,
                 weight: '${rubric[i].weight}%',
-                ratio: rubric[i].score / 10,
+                ratio: rubric[i].score / 100,
                 value: rubric[i].score.toStringAsFixed(1),
-                barColor:
-                    rubric[i].isWeak ? AppColors.warning : AppColors.indigo,
-                valueColor:
-                    rubric[i].isWeak ? AppColors.warnFg : AppColors.dark,
+                barColor: rubric[i].isWeak
+                    ? AppColors.warning
+                    : AppColors.indigo,
+                valueColor: rubric[i].isWeak
+                    ? AppColors.warnFg
+                    : AppColors.dark,
               ),
             ),
           ],

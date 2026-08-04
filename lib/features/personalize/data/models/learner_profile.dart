@@ -14,13 +14,19 @@ class LearnerProfile {
     required this.roadmap,
   });
 
-  /// Weighted average of [rubric], on the same 0..10 scale as the criteria.
+  /// Trung bình có trọng số của [rubric], cùng thang 0..100 với từng tiêu chí.
+  ///
+  /// Thang là 0-100 vì `rubric_criterions.min_score/max_score` của trường là 0-100, và
+  /// `final_score`/`item_score`/`overall_score` đều nằm trên thang đó. Chú thích cũ ghi 0..10
+  /// và giao diện in "/10" -- nên điểm 62,3 hiện thành "62,3 / 10".
   double get overallScore {
     if (rubric.isEmpty) return 0;
     final totalWeight = rubric.fold<int>(0, (sum, c) => sum + c.weight);
     if (totalWeight == 0) return 0;
-    final weighted =
-        rubric.fold<double>(0, (sum, c) => sum + c.score * c.weight);
+    final weighted = rubric.fold<double>(
+      0,
+      (sum, c) => sum + c.score * c.weight,
+    );
     return weighted / totalWeight;
   }
 

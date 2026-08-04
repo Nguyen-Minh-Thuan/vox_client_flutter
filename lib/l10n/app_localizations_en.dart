@@ -342,6 +342,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navPractice => 'Practice';
 
   @override
+  String get pzPreparingQuestions =>
+      'Preparing questions for this topic…\nThis takes about 10-20 seconds the first time.';
+
+  @override
   String get pzRetry => 'Retry';
 
   @override
@@ -365,15 +369,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pzLevelAdvanced => 'Advanced';
 
   @override
+  String pzLevelWithPrefix(String level) {
+    return 'Level: $level';
+  }
+
+  @override
   String get pzHomeSessionToday => 'TODAY\'S SESSION';
 
   @override
   String get pzHomePersonalizedBadge => 'PERSONALIZED';
 
   @override
-  String pzHomeSessionMeta(int minutes) {
-    return '$minutes min · 1-on-1 conversation · focus:';
-  }
+  String get pzHomeSessionMeta => '1-on-1 conversation · focus:';
 
   @override
   String get pzHomeStartSpeaking => 'Start speaking';
@@ -402,6 +409,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pzHomeSuggestions => 'Suggested for you';
+
+  @override
+  String get pzPreparingTopics => 'Finding topics that fit you…';
+
+  @override
+  String get pzPreparingHint =>
+      'The first time takes a little longer while we write new ones.';
+
+  @override
+  String get pzTopicsPreparing => 'We are putting your profile together';
+
+  @override
+  String get pzTopicsPreparingBody =>
+      'Your topics are being written from the survey you just finished. Come back in a minute or two.';
+
+  @override
+  String get pzTopicsRefresh => 'Reload';
 
   @override
   String get pzTopicsTitle => 'Speaking topics';
@@ -453,6 +477,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pzTopicsWhy => 'Why?';
+
+  @override
+  String pzSessionSpoken(String spoken, String budget) {
+    return 'Spoken · $spoken / $budget';
+  }
 
   @override
   String pzSessionLive(String time) {
@@ -546,6 +575,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pzSummaryRubricLegend => 'weight · score /10';
 
   @override
+  String get pzSummaryPronunciation => 'Words to work on';
+
+  @override
+  String get pzSummaryPronunciationEmpty =>
+      'No word scored below the threshold this session.';
+
+  @override
+  String pzSummaryWorstPhoneme(String phoneme, String percent) {
+    return '/$phoneme/ · $percent%';
+  }
+
+  @override
   String get pzSummaryRepeatedErrors => 'Repeated mistakes this session';
 
   @override
@@ -555,6 +596,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pzSummaryReplay => 'Replay my recording';
+
+  @override
+  String get pzLearningProfile => 'Learning profile';
+
+  @override
+  String get pzLearningProfileHint => 'Average score and recent sessions';
 
   @override
   String get pzWeaknessTitle => 'Weak-spot profile';
@@ -586,13 +633,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pzWeaknessExpression => 'Expression';
 
   @override
-  String get pzWeaknessSevere => 'SEVERE';
+  String get pzWeaknessSevere => 'HIGH PRIORITY';
 
   @override
-  String get pzWeaknessMedium => 'MODERATE';
+  String get pzWeaknessMedium => 'MEDIUM';
 
   @override
-  String get pzWeaknessMild => 'MILD';
+  String get pzWeaknessMild => 'NOT YET';
 
   @override
   String get pzHistoryTitle => 'Practice history';

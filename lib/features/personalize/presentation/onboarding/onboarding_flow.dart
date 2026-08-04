@@ -118,9 +118,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     final l10n = AppLocalizations.of(context)!;
 
     if (_loading || _submitting) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (_error != null) {
       return Scaffold(
@@ -215,8 +213,11 @@ class _OnboardingHeader extends StatelessWidget {
                       width: 1.5,
                     ),
                   ),
-                  child: const Icon(Icons.arrow_back,
-                      size: 20, color: Color(0xFF444444)),
+                  child: const Icon(
+                    Icons.arrow_back,
+                    size: 20,
+                    color: Color(0xFF444444),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

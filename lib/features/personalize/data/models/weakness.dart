@@ -41,8 +41,9 @@ class CriterionWeaknessRow {
   /// Meter-bar fill, derived from the real (roughly -1..1) [weakness] score.
   double get ratio => ((weakness + 1) / 2).clamp(0.0, 1.0);
 
-  WeaknessSeverity get severity =>
-      weakness > 0.3 ? WeaknessSeverity.severe : (weakness > 0 ? WeaknessSeverity.medium : WeaknessSeverity.mild);
+  WeaknessSeverity get severity => weakness > 0.3
+      ? WeaknessSeverity.severe
+      : (weakness > 0 ? WeaknessSeverity.medium : WeaknessSeverity.mild);
 
   factory CriterionWeaknessRow.fromJson(Map<String, dynamic> json) {
     return CriterionWeaknessRow(
@@ -64,13 +65,51 @@ class SubAttributeWeaknessRow {
   final WeaknessSeverity severity;
   final bool practiceable;
 
+  /// Đổi nhịp xuất hiện so với cửa sổ trước, %. Dương = đang sai nhiều hơn.
+  /// null khi mẫu quá nhỏ hoặc lỗi vừa mới phát hiện — lúc đó KHÔNG vẽ mũi tên,
+  /// vì một buổi lẻ cũng đủ làm con số nhảy vài chục phần trăm.
+  final double? trendPercent;
+
+  /// Vài đoạn học sinh đã nói làm bằng chứng cho nhãn này, mới nhất trước.
+  ///
+  /// Rỗng với nhãn suy từ SỐ ĐO (phát âm, tốc độ nói): chúng không gắn với một câu cụ thể
+  /// nào, nên bịa ra một câu làm ví dụ sẽ là nói sai về nguồn gốc của nhãn.
+  final List<WeaknessExample> examples;
+
+  /// Từng lặp lại nhưng cửa sổ gần đây không còn -- đang trên đà khỏi.
+  ///
+  /// Không tái phạm trong 60 ngày thì nhãn tự rụng hẳn khỏi danh sách
+  /// (`replaceForStudents` tính lại từ đầu mỗi lần làm mới, chỉ đếm quan sát trong cửa sổ).
+  final bool nearlyFixed;
+
+  /// Mọi lần xuất hiện đều trong cửa sổ gần đây -- lỗi mới lộ ra.
+  final bool newlyFound;
+
   const SubAttributeWeaknessRow({
     required this.criterionCode,
     required this.subAttribute,
     required this.occurrenceCount,
     required this.severity,
     required this.practiceable,
+    this.trendPercent,
+    this.examples = const [],
+    this.nearlyFixed = false,
+    this.newlyFound = false,
   });
+
+  /// Nhãn hiển thị cho học sinh.
+  ///
+  /// `phoneme_n` là ĐỊNH DANH NỘI BỘ do nhánh suy-từ-phát-âm sinh ra, không thuộc 13 nhãn
+  /// của SubAttributePolicy. Để lọt nguyên ra màn hình thì học sinh đọc được đúng chữ
+  /// "phoneme_n" -- vô nghĩa với người học. Các nhãn còn lại giữ nguyên theo quyết định
+  /// trước đó là không dịch sang tiếng Việt.
+  String get displayLabel {
+    if (subAttribute.startsWith('phoneme_')) {
+      final sound = subAttribute.substring('phoneme_'.length);
+      return sound.isEmpty ? subAttribute : 'Âm /$sound/';
+    }
+    return subAttribute;
+  }
 
   /// Meter-bar fill derived from the real occurrence count (normalized
   /// against 5 -- same scale convention used elsewhere in this app for
@@ -81,9 +120,17 @@ class SubAttributeWeaknessRow {
     return SubAttributeWeaknessRow(
       criterionCode: json['criterionCode'] as String,
       subAttribute: json['subAttribute'] as String,
+      examples: ((json['examples'] as List?) ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(WeaknessExample.fromJson)
+          .where((e) => e.text.isNotEmpty)
+          .toList(),
+      nearlyFixed: json['nearlyFixed'] as bool? ?? false,
+      newlyFound: json['newlyFound'] as bool? ?? false,
       occurrenceCount: (json['occurrenceCount'] as num?)?.toInt() ?? 0,
       severity: _severityFromCode(json['severity'] as String?),
       practiceable: json['practiceable'] as bool? ?? false,
+      trendPercent: (json['trendPercent'] as num?)?.toDouble(),
     );
   }
 }
@@ -120,8 +167,30 @@ class WeaknessProfile {
           .map((e) => CriterionWeaknessRow.fromJson(e as Map<String, dynamic>))
           .toList(),
       subAttributes: (json['subAttributes'] as List<dynamic>? ?? const [])
-          .map((e) => SubAttributeWeaknessRow.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => SubAttributeWeaknessRow.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
     );
   }
+}
+
+
+/// Một bằng chứng thật cho nhãn điểm yếu, kèm số lần lặp.
+///
+/// Với lỗi phát âm đây là phần duy nhất dùng được: nhãn "/d/" đứng một mình thì học sinh
+/// không biết sửa gì, còn "read ×3 · daily ×2" thì luyện được ngay. Số lần theo TỪ cũng cho
+/// thấy đó là lỗi âm lặp qua nhiều từ (luyện âm) hay chỉ vấp một từ (học lại từ đó).
+class WeaknessExample {
+  final String text;
+  final int times;
+
+  const WeaknessExample({required this.text, required this.times});
+
+  factory WeaknessExample.fromJson(Map<String, dynamic> json) => WeaknessExample(
+    text: (json['text'] as String? ?? '').trim(),
+    times: (json['times'] as num?)?.toInt() ?? 1,
+  );
+
+  String get label => times > 1 ? '$text ×$times' : text;
 }

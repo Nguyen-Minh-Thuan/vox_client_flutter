@@ -10,8 +10,22 @@ class SessionSummary {
   final List<SessionRubricCriterion> rubric;
   final List<RepeatedError> repeatedErrors;
 
+  /// Từ phát âm chưa đạt trong buổi, đã gộp và xếp từ sai nặng nhất.
+  final List<MispronouncedWord> mispronounced;
+
   /// Estimated minutes for the "Luyện lại N lỗi này" drill.
   final int drillMinutes;
+
+  /// Số câu đã nói nhưng chưa có bản chấm. > 0 nghĩa là kết quả còn đang được tổng hợp:
+  /// chấm chạy bất đồng bộ và về sau khi phiên đã đóng vài chục giây.
+  final int pendingEvaluations;
+
+  /// Trung bình độ khó các câu đã trả lời. null khi chưa có câu nào.
+  ///
+  /// Hiện cạnh điểm vì điểm MỘT MÌNH không đọc được: nó neo vào bậc mục tiêu, còn độ khó câu
+  /// lại bám theo bậc hiện tại của học sinh. Em giỏi lên thì câu khó lên và điểm đứng yên —
+  /// "6,5 ở bậc 3" và "6,5 ở bậc 4" là hai chuyện khác hẳn.
+  final double? difficultyRank;
 
   const SessionSummary({
     required this.sessionId,
@@ -21,8 +35,13 @@ class SessionSummary {
     required this.delta,
     this.rubric = const [],
     this.repeatedErrors = const [],
+    this.mispronounced = const [],
     this.drillMinutes = 4,
+    this.pendingEvaluations = 0,
+    this.difficultyRank,
   });
+
+  bool get stillGrading => pendingEvaluations > 0;
 
   factory SessionSummary.fromJson(Map<String, dynamic> json) {
     return SessionSummary(
@@ -32,7 +51,9 @@ class SessionSummary {
       score: (json['score'] as num?)?.toDouble() ?? 0,
       delta: (json['delta'] as num?)?.toDouble() ?? 0,
       rubric: (json['rubric'] as List<dynamic>? ?? const [])
-          .map((e) => SessionRubricCriterion.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => SessionRubricCriterion.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
       repeatedErrors: (json['repeatedErrors'] as List<dynamic>? ?? const [])
           .map((e) => RepeatedError.fromJson(e as Map<String, dynamic>))
@@ -56,19 +77,79 @@ class SessionRubricCriterion {
       );
 }
 
+/// Một từ phát âm chưa đạt trong buổi, kèm âm vị yếu nhất của nó.
+///
+/// Gộp theo TỪ trên cả buổi chứ không tách theo từng câu: mở tổng kết ra là muốn biết "buổi
+/// này mình hay sai âm gì", chứ không phải lần theo từng câu để tự cộng lại.
+class MispronouncedWord {
+  final String word;
+  final double accuracy;
+
+  /// Âm vị kém nhất trong từ — đây chính là "sai ở chỗ nào". Null khi Azure không trả
+  /// chi tiết âm vị cho từ đó.
+  final String? worstPhoneme;
+  final double? worstPhonemeAccuracy;
+
+  /// Số lần từ này bị chấm dưới ngưỡng trong buổi.
+  final int times;
+
+  const MispronouncedWord({
+    required this.word,
+    required this.accuracy,
+    this.worstPhoneme,
+    this.worstPhonemeAccuracy,
+    this.times = 1,
+  });
+}
+
 /// One row of "LỖI LẶP LẠI TRONG BUỔI".
+///
+/// [examples] là các lỗi THẬT đã ghi trong buổi, không phải chỉ con số. Bản trước chỉ đếm
+/// `category` rồi vứt hết phần còn lại, nên màn tổng kết ghi "ngữ pháp ×3" mà không nói được
+/// sai ở đâu -- một con số như vậy không sửa được gì: học sinh biết mình sai ngữ pháp ba lần
+/// nhưng không biết ba lần đó là câu nào.
 class RepeatedError {
   final String label;
   final int count;
+  final List<SessionCorrection> examples;
+
   const RepeatedError({
     required this.label,
     required this.count,
+    this.examples = const [],
   });
 
   factory RepeatedError.fromJson(Map<String, dynamic> json) {
     return RepeatedError(
       label: json['label'] as String,
       count: (json['count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+/// Một lỗi cụ thể đã được sửa trong buổi: em nói gì, đúng phải là gì, vì sao.
+///
+/// Cả ba trường này GraphQL vốn đã trả về theo từng lượt (`corrections { category
+/// originalText correctedText explanation }`) -- không cần thêm truy vấn hay bảng nào.
+class SessionCorrection {
+  final String category;
+  final String originalText;
+  final String correctedText;
+  final String explanation;
+
+  const SessionCorrection({
+    required this.category,
+    required this.originalText,
+    required this.correctedText,
+    required this.explanation,
+  });
+
+  factory SessionCorrection.fromJson(Map<String, dynamic> json) {
+    return SessionCorrection(
+      category: (json['category'] as String? ?? '').trim(),
+      originalText: (json['originalText'] as String? ?? '').trim(),
+      correctedText: (json['correctedText'] as String? ?? '').trim(),
+      explanation: (json['explanation'] as String? ?? '').trim(),
     );
   }
 }

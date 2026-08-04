@@ -28,6 +28,20 @@ class PracticeTopic {
   final String icon;
   final Set<TopicFilter> buckets;
 
+  /// HỌC SINH đến với chủ đề này bằng đường nào -- quyết định độ mạnh của tín hiệu sở thích
+  /// ghi lại ở cuối phiên (thiết kế gói 6 mục 2.5/2.8, cài trong
+  /// `InterestVectorService.recordSessionOutcome`):
+  ///
+  /// | origin | hoàn thành | bỏ dở vì chán |
+  /// |---|---|---|
+  /// | `KEYWORD` (tự gõ tìm) | 1.00 | 0.20 |
+  /// | `SELECTED` (tự bấm thẻ) | 0.95 | 0.15 |
+  /// | `EXPLORATION` (bấm "chọn giúp tôi") | 0.60 | 0.10 |
+  ///
+  /// Phải đi theo chủ đề chứ không gán cứng lúc vào phiên: hệ thống tự đưa chủ đề mà ghi
+  /// 0.95 như học sinh tự chọn là **dương giả** -- đúng thứ thiết kế cảnh báo.
+  final String origin;
+
   const PracticeTopic({
     required this.id,
     required this.title,
@@ -39,6 +53,7 @@ class PracticeTopic {
     this.focusTags = const [],
     this.icon = 'chat_bubble_outline',
     this.buckets = const {TopicFilter.forYou},
+    this.origin = 'SELECTED',
   });
 
   /// Builds from the real backend shape (`PracticeTopicOffer`/`TopicSearchResult.topics`
@@ -46,6 +61,7 @@ class PracticeTopic {
   factory PracticeTopic.fromOffer(
     Map<String, dynamic> json, {
     TopicFilter bucket = TopicFilter.forYou,
+    String origin = 'SELECTED',
   }) {
     final savedByMe = json['savedByMe'] as bool? ?? false;
     return PracticeTopic(
@@ -61,10 +77,8 @@ class PracticeTopic {
       focusTags: (json['focusTags'] as List<dynamic>? ?? const [])
           .map((e) => e as String)
           .toList(),
-      buckets: {
-        bucket,
-        if (savedByMe) TopicFilter.saved,
-      },
+      buckets: {bucket, if (savedByMe) TopicFilter.saved},
+      origin: origin,
     );
   }
 

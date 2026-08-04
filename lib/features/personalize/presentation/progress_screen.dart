@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../app/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../data/models/criterion_band_trend.dart';
 import '../data/models/progress_report.dart';
 import '../data/personalize_repository.dart';
 import 'personalize_styles.dart';
 import 'personalize_widgets.dart';
+import 'practice_history_screen.dart';
 
 /// Design `1f`, screen 4 — score trend and session history.
 class ProgressScreen extends StatefulWidget {
@@ -20,6 +22,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
   final _repository = PersonalizeRepository();
 
   ProgressRange _range = ProgressRange.fourWeeks;
+  List<CriterionBandTrend> _bandTrends = const [];
   bool _loading = true;
   String? _error;
   ProgressReport? _report;
@@ -36,9 +39,17 @@ class _ProgressScreenState extends State<ProgressScreen> {
       _error = null;
     });
     try {
-      final report = await _repository.getProgress(_range);
+      final results = await Future.wait([
+        _repository.getProgress(_range),
+        _repository.getCriterionBandTrends(_range),
+      ]);
+      final report = results[0] as ProgressReport;
+      final trends = results[1] as List<CriterionBandTrend>;
       if (!mounted) return;
-      setState(() => _report = report);
+      setState(() {
+        _report = report;
+        _bandTrends = trends;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = '$e');
@@ -88,22 +99,50 @@ class _ProgressScreenState extends State<ProgressScreen> {
           Expanded(
             child: switch ((_loading, _error, _report)) {
               (true, _, _) => const Center(child: CircularProgressIndicator()),
-              (_, final String error, _) =>
-                PersonalizeErrorView(detail: error, onRetry: _load),
+              (_, final String error, _) => PersonalizeErrorView(
+                detail: error,
+                onRetry: _load,
+              ),
               (_, _, null) => PersonalizeErrorView(onRetry: _load),
               (_, _, final ProgressReport report) => ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                  children: [
-                    _AverageCard(report: report),
-                    const SizedBox(height: 20),
-                    SectionLabel(l10n.pzProgressRecentSessions),
-                    const SizedBox(height: 10),
-                    for (final session in report.recentSessions) ...[
-                      _HistoryRow(session: session),
-                      const SizedBox(height: 8),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                children: [
+                  _AverageCard(report: report),
+                  const SizedBox(height: 20),
+                  _BandTrendCard(trends: _bandTrends),
+                  const SizedBox(height: 20),
+                  // Ở đây chỉ liệt kê vài buổi gần nhất; danh sách đầy đủ (và bấm vào
+                  // xem lại tổng kết từng buổi) nằm ở PracticeHistoryScreen -- màn đó
+                  // viết xong từ lâu nhưng chưa có nút nào dẫn tới, đây là nút đó.
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SectionLabel(l10n.pzProgressRecentSessions),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const PracticeHistoryScreen(),
+                          ),
+                        ),
+                        child: Text(
+                          l10n.pzSeeAll,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.indigo,
+                          ),
+                        ),
+                      ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  for (final session in report.recentSessions) ...[
+                    _HistoryRow(session: session),
+                    const SizedBox(height: 8),
                   ],
-                ),
+                ],
+              ),
             },
           ),
         ],
@@ -254,8 +293,11 @@ class _HistoryRow extends StatelessWidget {
               color: AppColors.fieldBg,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.chat_bubble_outline,
-                size: 20, color: Color(0xFF555555)),
+            child: const Icon(
+              Icons.chat_bubble_outline,
+              size: 20,
+              color: Color(0xFF555555),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -287,8 +329,7 @@ class _HistoryRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color:
-                  positive ? AppColors.chipGreenBg : AppColors.chipOrangeBg,
+              color: positive ? AppColors.chipGreenBg : AppColors.chipOrangeBg,
               borderRadius: BorderRadius.circular(99),
             ),
             child: Text(
@@ -296,13 +337,177 @@ class _HistoryRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
-                color:
-                    positive ? AppColors.chipGreenFg : AppColors.chipOrangeFg,
+                color: positive
+                    ? AppColors.chipGreenFg
+                    : AppColors.chipOrangeFg,
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+
+/// "Bậc theo tiêu chí" — thước đo tiến bộ không co giãn.
+///
+/// Đặt ngay dưới thẻ điểm trung bình là có chủ đích: điểm ở trên trả lời "buổi vừa rồi thế
+/// nào", thẻ này trả lời "mình có khá lên không" — và hai câu đó có thể ngược nhau. Điểm
+/// đứng yên trong khi bậc đi lên nghĩa là em ấy đang trả lời được những câu khó hơn ở cùng
+/// mức hoàn thành.
+class _BandTrendCard extends StatelessWidget {
+  const _BandTrendCard({required this.trends});
+  final List<CriterionBandTrend> trends;
+
+  static const labels = {
+    'GRAMMAR': 'Ngữ pháp',
+    'VOCABULARY': 'Từ vựng',
+    'COHERENCE': 'Mạch lạc',
+    'PRONUNCIATION': 'Phát âm',
+    'FLUENCY': 'Lưu loát',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: cardDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SectionLabel('BẬC THEO TIÊU CHÍ'),
+          const SizedBox(height: 4),
+          const Text(
+            'Bậc mà câu trả lời thực sự đạt được — không phụ thuộc bậc mục tiêu, nên so được giữa các buổi.',
+            style: TextStyle(fontSize: 12, height: 1.35, color: AppColors.muted),
+          ),
+          const SizedBox(height: 12),
+          // Luôn liệt kê ĐỦ 5 tiêu chí, kể cả tiêu chí chưa có dữ liệu. Bản trước chỉ vẽ
+          // những tiêu chí có bậc, nên tiêu chí thiếu lặng lẽ biến mất -- học sinh thấy 4 dòng
+          // mà không biết dòng thứ 5 là "chưa đo được" hay "không tồn tại". Mà thiếu là chuyện
+          // xảy ra thật: bản chấm bị đánh dấu độ tin cậy thấp, hoặc mô hình trả về mã bậc
+          // không hợp lệ và bị chốt chặn loại đi.
+          for (int i = 0; i < labels.length; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            () {
+              final code = labels.keys.elementAt(i);
+              final match = trends.where((t) => t.criterionCode.toUpperCase() == code);
+              return match.isEmpty
+                  ? _MissingBandRow(label: labels[code]!)
+                  : _BandTrendRow(trend: match.first);
+            }(),
+          ],
+          if (trends.isNotEmpty && !trends.any((t) => t.hasExam)) ...[
+            const SizedBox(height: 12),
+            const Text(
+              'Số liệu chỉ từ bài luyện. Độ khó câu luyện bám theo trình độ hiện tại, nên đường này thường phẳng hơn thực tế — bài thi phản ánh đúng hơn.',
+              style: TextStyle(
+                fontSize: 11.5,
+                height: 1.35,
+                color: AppColors.textFaint,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Tiêu chí chưa có bậc nào trong khoảng đang xem.
+///
+/// Nói ra thay vì bỏ trống: "chưa đo được" là một thông tin, còn một dòng biến mất thì học
+/// sinh không phân biệt được với "không có tiêu chí này".
+class _MissingBandRow extends StatelessWidget {
+  const _MissingBandRow({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.muted,
+            ),
+          ),
+        ),
+        const Text(
+          'chưa đo được',
+          style: TextStyle(fontSize: 12.5, color: AppColors.textFaint),
+        ),
+      ],
+    );
+  }
+}
+
+class _BandTrendRow extends StatelessWidget {
+  const _BandTrendRow({required this.trend});
+  final CriterionBandTrend trend;
+
+  @override
+  Widget build(BuildContext context) {
+    final delta = trend.delta;
+    // Ngưỡng 0.05 bậc: dưới mức đó là nhiễu làm tròn, vẽ mũi tên vào sẽ nói một điều mà dữ
+    // liệu không nói.
+    final meaningful = delta != null && delta.abs() >= 0.05;
+    final better = (delta ?? 0) > 0;
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _BandTrendCard.labels[trend.criterionCode.toUpperCase()] ??
+                    trend.criterionCode,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${trend.observationCount} lần chấm',
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: AppColors.textFaint,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          trend.bandLabel,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: AppColors.indigo,
+          ),
+        ),
+        if (meaningful) ...[
+          const SizedBox(width: 8),
+          Icon(
+            better ? Icons.arrow_upward : Icons.arrow_downward,
+            size: 14,
+            color: better ? AppColors.chipGreenFg : AppColors.danger,
+          ),
+          Text(
+            delta.abs().toStringAsFixed(1).replaceAll('.', ','),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: better ? AppColors.chipGreenFg : AppColors.danger,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

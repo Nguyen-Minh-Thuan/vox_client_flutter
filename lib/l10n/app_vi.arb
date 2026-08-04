@@ -137,6 +137,7 @@
 
   "navPractice": "Luyện nói",
 
+  "pzPreparingQuestions": "Đang chuẩn bị câu hỏi riêng cho chủ đề này…\nMất khoảng 10-20 giây cho lần đầu.",
   "pzRetry": "Thử lại",
   "pzLoadError": "Không thể tải phần ôn luyện cá nhân hoá.",
   "pzSeeAll": "Tất cả",
@@ -147,13 +148,14 @@
   "pzLevelBeginner": "Cơ bản",
   "pzLevelIntermediate": "Trung cấp",
   "pzLevelAdvanced": "Nâng cao",
+  "pzLevelWithPrefix": "Mức độ: {level}",
+  "@pzLevelWithPrefix": {
+    "placeholders": { "level": { "type": "String" } }
+  },
 
   "pzHomeSessionToday": "PHIÊN HÔM NAY",
   "pzHomePersonalizedBadge": "CÁ NHÂN HOÁ",
-  "pzHomeSessionMeta": "{minutes} phút · hội thoại 1-1 · trọng tâm:",
-  "@pzHomeSessionMeta": {
-    "placeholders": { "minutes": { "type": "int" } }
-  },
+  "pzHomeSessionMeta": "Hội thoại 1-1 · trọng tâm:",
   "pzHomeStartSpeaking": "Bắt đầu nói",
   "pzHomeChangeTopic": "Đổi chủ đề",
   "pzHomeStatSessions": "Buổi đã nói",
@@ -164,6 +166,11 @@
   "pzHomeViewProfile": "Xem hồ sơ",
   "pzHomeSuggestions": "Gợi ý cho bạn",
 
+  "pzPreparingTopics": "Đang tìm chủ đề hợp với bạn…",
+  "pzPreparingHint": "Lần đầu có thể lâu hơn chút vì đang soạn mới.",
+  "pzTopicsPreparing": "Hệ thống đang tổng hợp thông tin của bạn",
+  "pzTopicsPreparingBody": "Chủ đề riêng đang được soạn dựa trên bài khảo sát vừa làm. Quay lại sau 1-2 phút nhé.",
+  "pzTopicsRefresh": "Tải lại",
   "pzTopicsTitle": "Chủ đề luyện nói",
   "pzTopicsSearchHint": "Tìm chủ đề, kỹ năng…",
   "pzTopicsFilterForYou": "Cho bạn",
@@ -184,6 +191,11 @@
   "pzTopicsFooterTip": "Danh sách này tự đổi sau mỗi buổi nói — dựa trên chủ đề bạn hào hứng và lỗi lặp lại.",
   "pzTopicsWhy": "Vì sao?",
 
+  "pzSessionSpoken": "Đã nói · {spoken} / {budget}",
+  "@pzSessionSpoken": {
+    "description": "Header phiên luyện: số giây học sinh THẬT SỰ nói so với ngân sách nói của phiên. Không phải đồng hồ đếm -- lúc AI nói hay học sinh nghĩ đều không tính.",
+    "placeholders": { "spoken": { "type": "String" }, "budget": { "type": "String" } }
+  },
   "pzSessionLive": "Đang nói · {time}",
   "@pzSessionLive": {
     "placeholders": { "time": { "type": "String" } }
@@ -228,6 +240,13 @@
   },
   "pzSummaryRubric": "Rubric · 5 tiêu chí",
   "pzSummaryRubricLegend": "trọng số · điểm /10",
+  "pzSummaryPronunciation": "Từ phát âm chưa đạt",
+  "pzSummaryPronunciationEmpty": "Không có từ nào bị chấm dưới ngưỡng trong buổi này.",
+  "pzSummaryWorstPhoneme": "Âm /{phoneme}/ · {percent}%",
+  "@pzSummaryWorstPhoneme": {
+    "description": "Âm vị yếu nhất trong một từ phát âm chưa đạt -- chính là chỗ sai.",
+    "placeholders": { "phoneme": { "type": "String" }, "percent": { "type": "String" } }
+  },
   "pzSummaryRepeatedErrors": "Lỗi lặp lại trong buổi",
   "pzSummaryDrill": "Luyện lại {count} lỗi này · {minutes} phút",
   "@pzSummaryDrill": {
@@ -238,6 +257,8 @@
   },
   "pzSummaryReplay": "Nghe lại ghi âm",
 
+  "pzLearningProfile": "Hồ sơ học tập",
+  "pzLearningProfileHint": "Điểm trung bình và các buổi gần đây",
   "pzWeaknessTitle": "Hồ sơ điểm yếu",
   "pzWeaknessRange": "30 ngày",
   "pzWeaknessFromSessions": "Tổng hợp từ {count} buổi nói",
@@ -250,9 +271,9 @@
   "pzWeaknessGrammar": "Ngữ pháp",
   "pzWeaknessPronunciation": "Phát âm",
   "pzWeaknessExpression": "Diễn đạt",
-  "pzWeaknessSevere": "NẶNG",
-  "pzWeaknessMedium": "VỪA",
-  "pzWeaknessMild": "NHẸ",
+  "pzWeaknessSevere": "ƯU TIÊN CAO",
+  "pzWeaknessMedium": "ƯU TIÊN VỪA",
+  "pzWeaknessMild": "CHƯA CẦN",
   "pzHistoryTitle": "Lịch sử luyện tập",
   "pzHistoryEmpty": "Chưa có phiên luyện tập nào",
   "pzWeaknessObservations": "{count} lần quan sát",

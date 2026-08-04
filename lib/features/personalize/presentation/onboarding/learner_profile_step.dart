@@ -52,7 +52,7 @@ class LearnerProfileStep extends StatelessWidget {
                           ),
                         ),
                         const Text(
-                          ' /10',
+                          ' /100',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,

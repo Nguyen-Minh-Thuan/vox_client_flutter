@@ -89,7 +89,9 @@ class InterestQuizStep extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF555555),
                         side: const BorderSide(
-                            color: Color(0xFFE6E6E6), width: 1.5),
+                          color: Color(0xFFE6E6E6),
+                          width: 1.5,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(99),
                         ),

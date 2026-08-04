@@ -21,10 +21,15 @@ enum _RecorderState { idle, recording, processing }
 
 /// Silence-timeout tuning mirrors WPF's SpeechTurnCoordinator.CaptureAsync
 /// (DesktopApp/VoxOralExam/.../Services/ExamFlow/Turn/SpeechTurnCoordinator.cs) --
-/// initial timeout before any speech at all (chốt 8s, mục 2.8), then a grace period after
-/// vad_speech_end that tolerates a natural mid-answer pause before really ending the turn.
-const _kInitialSilenceTimeout = Duration(seconds: 8);
-const _kSpeechEndGracePeriod = Duration(seconds: 3);
+/// Chỉ còn MỘT mốc: khoảng ân hạn sau `vad_speech_end`, đủ để dung thứ một quãng ngập ngừng
+/// giữa câu trước khi thực sự khép lượt.
+///
+/// Mốc "im lặng ban đầu 8s" (mục 2.8, còn dùng ở luồng THI) đã bỏ khỏi luyện tập: ở đó hỏi
+/// xong mà học sinh chưa kịp mở lời là chết lượt và bị hỏi lại ngay. Luyện tập cho phép nghĩ
+/// bao lâu tuỳ ý -- lượt chỉ khép sau khi đã thực sự nói.
+/// 5s chứ không 3s như bên thi: luyện tập không tính giờ thi, học sinh hay ngập ngừng giữa
+/// câu để nghĩ từ. Cắt sớm là chốt lượt khi họ mới nói được nửa ý.
+const _kSpeechEndGracePeriod = Duration(seconds: 5);
 
 /// Design `1c` — the live 1-1 speaking session with inline corrections.
 ///
@@ -53,8 +58,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
 
   // Both only run while the mic is live — an idle session should not keep a
   // 60 fps ticker alive.
-  late final AnimationController _wave =
-      AnimationController(vsync: this, duration: const Duration(seconds: 2));
+  late final AnimationController _wave = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 2),
+  );
   late final AnimationController _pulse = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1800),
@@ -67,6 +74,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   Timer? _turnTimer;
 
   bool _loading = true;
+
+  /// True khi backend báo PREPARING (đang nhờ AI sinh câu mới cho chủ đề này).
+  bool _preparingQuestions = false;
   String? _error;
   PracticeSession? _session;
 
@@ -79,7 +89,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   /// Mic mute toggle — independent of `_recorderState` (continuous-listen model, see
   /// module docstring): muted just streams silence instead of stopping the connection,
   /// mirrors WPF's ToggleMuteCommand/TurnAudioRecorder.IsMuted.
-  bool _muted = false;
+  /// Mặc định TẮT: push-to-talk nên chỉ mở tiếng trong lúc học sinh giữ nút. Bắt đầu ở
+  /// trạng thái mở là mic thu luôn câu hỏi do loa phát ra (xem _startTalking).
+  bool _muted = true;
 
   /// True once speech has been detected for the CURRENT turn (silence-timeout bookkeeping).
   bool _speakingNow = false;
@@ -109,6 +121,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
 
   bool _sessionEnded = false;
   bool _endingSession = false;
+
   /// Distinct from `_sessionEnded` (which only means "UI should show the finish state" and
   /// gets set by `_handleSessionEndedByServer` too): guards `_endSession` so the
   /// `endPracticeSession` mutation still runs exactly once even when the server ended the
@@ -118,8 +131,19 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   /// Normalised 0..1 mic level driving the waveform.
   double _level = 0.35;
 
-  /// Seconds since the session opened.
-  int _elapsed = 0;
+  /// Tổng số giây học sinh ĐÃ NÓI trong phiên, theo server — cập nhật qua `session_budget`
+  /// sau mỗi lượt nộp. Cố ý KHÔNG phải đồng hồ đếm từ lúc mở phiên như trước: quota chỉ trừ
+  /// đúng khoảng VAD nghe thấy tiếng, nên lúc AI nói / học sinh nghĩ / chờ chấm đều không
+  /// tính. Đồng hồ cũ trông như đang đếm hạn mức mà thật ra không liên quan gì tới hạn mức.
+  int _spokenSeconds = 0;
+
+  /// Trần nói của cả phiên (giây): chỗ hẹp hơn giữa hạn mức gói và trần bậc năng lực.
+  /// 0 nghĩa là chưa biết — header lùi về nhãn cũ thay vì vẽ một mẫu số bịa.
+  int _budgetSeconds = 0;
+
+  /// Phần đang nói của lượt hiện tại, server chưa chốt. Chỉ chạy khi VAD báo có tiếng, đúng
+  /// bằng quy tắc server dùng để trừ quota, nên lúc reconcile không nhảy giật.
+  int _liveSpokenSeconds = 0;
 
   bool get _isComplete => _sessionEnded;
 
@@ -162,15 +186,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   /// completion (e.g. after the farewell utterance) doesn't arm a timer post-session.
   void _onAiSpeechDone() {
     if (!mounted) return;
-    // _hasSpokenThisTurn guards against a completion callback that arrives AFTER a barge-in
-    // already stopped the TTS and the student is mid-answer -- re-arming the initial-silence
-    // timer at that point would wrongly reset progress on a turn already underway.
+    // Chỉ báo cho Python biết cửa sổ phát TTS đã đóng để nó dọn buffer audio của lượt
+    // (xem ready_to_answer trong connection.py). KHÔNG hẹn giờ im lặng nữa: học sinh muốn
+    // nghĩ bao lâu tuỳ ý, lượt chỉ bắt đầu khi họ bấm giữ nút.
     if (_recorderState == _RecorderState.recording && !_hasSpokenThisTurn) {
-      // Tells Python the TTS-playback window is over so it can re-clear the turn audio
-      // buffer -- shrinks how much of the AI's own speech/silence can sit at the front of
-      // the WAV handed to Pronunciation Assessment (see connection.py's ready_to_answer).
       _realtimeClient.send({'type': 'ready_to_answer'});
-      _armInitialSilenceTimer();
     }
   }
 
@@ -190,12 +210,24 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     });
     try {
       await _initTts();
-      final started = await _repository.startSession(widget.topic);
+      final started = await _repository.startSession(
+        widget.topic,
+        // Chỉ chạy khi kho chưa có câu phù hợp và AI phải sinh mới -- đổi nhãn để học
+        // sinh biết đang chờ cái gì thay vì nhìn spinner trống vài chục giây.
+        onPreparing: () {
+          if (mounted) setState(() => _preparingQuestions = true);
+        },
+      );
       if (!mounted) return;
       setState(() {
         _session = started.session;
         _visible.clear();
         _nextTurnOrder = 1;
+        // Ngân sách phải có NGAY từ đây: lượt đầu chưa nộp nên chưa có `session_budget` nào
+        // từ server, mà học sinh thì đã nhìn thấy header rồi.
+        _budgetSeconds = started.budgetSeconds;
+        _spokenSeconds = 0;
+        _liveSpokenSeconds = 0;
       });
       _eventsSub = _realtimeClient.events.listen(_handleRealtimeEvent);
       _currentQuestionId = started.firstQuestion['questionId']?.toString();
@@ -206,6 +238,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         'paper_item_id': started.firstQuestion['slot']?.toString(),
         'question': {
           'question_text': started.firstQuestion['questionText'],
+          // Sàn/trần: SignalNode bên Python cần SÀN để biết trả lời đã đủ chưa. Câu đầu tiên đi
+          // qua đường này chứ không qua `next_question`, nên thiếu ở đây là riêng nó bị đo lệch.
+          'min_response_seconds': started.firstQuestion['minResponseSeconds'],
           'max_response_seconds': started.firstQuestion['maxResponseSeconds'],
         },
         'language': 'en-US',
@@ -249,9 +284,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     _amplitudeSub = _recorder
         .onAmplitudeChanged(const Duration(milliseconds: 120))
         .listen((amplitude) {
-      if (!mounted) return;
-      setState(() => _level = _normalise(amplitude.current));
-    });
+          if (!mounted) return;
+          setState(() => _level = _normalise(amplitude.current));
+        });
 
     if (!mounted) return;
     _wave.repeat();
@@ -269,8 +304,23 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   void _startClock() {
     _clock?.cancel();
     _clock = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() => _elapsed++);
+      // CHỈ chạy khi VAD đang nghe thấy tiếng -- đúng bằng thứ server trừ quota. Trước đây
+      // tick vô điều kiện nên header đếm cả lúc AI nói và lúc học sinh ngồi nghĩ.
+      if (!mounted || !_speakingNow) return;
+      setState(() => _liveSpokenSeconds++);
+    });
+  }
+
+  /// Server chốt lại "đã nói / ngân sách" sau mỗi lượt nộp và mỗi câu hỏi mới.
+  void _handleSessionBudget(Map<String, dynamic> event) {
+    final spoken = (event['spoken_seconds'] as num?)?.round();
+    final budget = (event['budget_seconds'] as num?)?.round();
+    if (spoken == null || budget == null) return;
+    setState(() {
+      _spokenSeconds = spoken;
+      _budgetSeconds = budget;
+      // Phần đếm tại chỗ giờ đã nằm trong con số server -- giữ lại là cộng đúp.
+      _liveSpokenSeconds = 0;
     });
   }
 
@@ -296,6 +346,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         _handleDecision(event['decision'] as Map<String, dynamic>? ?? const {});
       case 'correction':
         _handleCorrection(event);
+      case 'session_budget':
+        _handleSessionBudget(event);
       case 'next_question':
         final question = event['question'] as Map<String, dynamic>?;
         _currentQuestionId = question?['questionId']?.toString();
@@ -321,12 +373,14 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     if (text.trim().isEmpty) return;
     if (!mounted) return;
     setState(() {
-      _visible.add(PracticeTurn(
-        id: 'ai-${_visible.length}',
-        turnOrder: _nextTurnOrder,
-        speaker: Speaker.ai,
-        text: text,
-      ));
+      _visible.add(
+        PracticeTurn(
+          id: 'ai-${_visible.length}',
+          turnOrder: _nextTurnOrder,
+          speaker: Speaker.ai,
+          text: text,
+        ),
+      );
     });
     _scrollToEnd();
   }
@@ -336,8 +390,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     _speakingNow = true;
     _hasSpokenThisTurn = true;
     _speechStartedAt ??= DateTime.now();
-    // Barge-in: if the student starts talking while the AI is still mid-sentence, cut it off
-    // immediately rather than let it keep talking over them.
+    // Barge-in: học sinh cất tiếng lúc AI còn đang nói thì cắt lời AI ngay.
     _tts.stop();
   }
 
@@ -347,13 +400,12 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     _armGracePeriodTimer();
   }
 
-  void _armInitialSilenceTimer() {
-    _turnTimer?.cancel();
-    _turnTimer = Timer(_kInitialSilenceTimeout, () {
-      if (!_hasSpokenThisTurn) _sendTurnEnd();
-    });
-  }
-
+  /// Sau khi học sinh NGỪNG nói mới đếm ân hạn rồi chốt lượt.
+  ///
+  /// Cố ý KHÔNG có bộ đếm cho khoảng im lặng TRƯỚC khi học sinh nói: bên thi có
+  /// _kInitialSilenceTimeout (8s) nên hỏi xong mà chưa kịp trả lời là chết lượt và bị hỏi
+  /// lại ngay. Luyện tập thì học sinh được nghĩ bao lâu tuỳ ý -- lượt chỉ khép lại sau khi
+  /// đã thực sự nói.
   void _armGracePeriodTimer() {
     _turnTimer?.cancel();
     _turnTimer = Timer(_kSpeechEndGracePeriod, () {
@@ -378,16 +430,21 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     if (!mounted) return;
     setState(() {
       _recorderState = _RecorderState.processing;
-      _visible.add(PracticeTurn(
-        id: 'student-$_nextTurnOrder',
-        turnOrder: _nextTurnOrder,
-        speaker: Speaker.student,
-        text: transcript,
-      ));
+      _visible.add(
+        PracticeTurn(
+          id: 'student-$_nextTurnOrder',
+          turnOrder: _nextTurnOrder,
+          speaker: Speaker.student,
+          text: transcript,
+        ),
+      );
       _nextTurnOrder++;
     });
     _scrollToEnd();
-    _realtimeClient.send({'type': 'turn_end', 'duration_seconds': durationSeconds});
+    _realtimeClient.send({
+      'type': 'turn_end',
+      'duration_seconds': durationSeconds,
+    });
   }
 
   void _handleDecision(Map<String, dynamic> decision) {
@@ -413,7 +470,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         // Reconnected while idle (nothing was mid-flight) -- the server tells us the prompt
         // that was active; re-send present_question with it exactly like any other
         // transition, which re-triggers TTS + arms the silence timer once it finishes.
-        _realtimeClient.send({'type': 'present_question', 'prompt_text': promptToSpeak});
+        _realtimeClient.send({
+          'type': 'present_question',
+          'prompt_text': promptToSpeak,
+        });
         _hasSpokenThisTurn = false;
         _speakingNow = false;
         _speechStartedAt = null;
@@ -468,8 +528,9 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         .map(_correctionFromJson)
         .toList();
     setState(() {
-      final index =
-          _visible.lastIndexWhere((t) => t.speaker == Speaker.student);
+      final index = _visible.lastIndexWhere(
+        (t) => t.speaker == Speaker.student,
+      );
       if (index != -1) {
         final turn = _visible[index];
         _visible[index] = PracticeTurn(
@@ -478,8 +539,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
           speaker: turn.speaker,
           text: turn.text,
           score: turn.score,
-          spans: turn.spans,
+          spans: _spansFor(turn.text, corrections),
           corrections: corrections,
+          // Đánh dấu ĐÃ CHẤM kể cả khi danh sách sửa rỗng -- thẻ vẫn phải hiện để nói
+          // "tốt, không có gì sửa" hoặc "lượt này chưa nói gì".
+          correctionsArrived: true,
         );
       }
       _recorderState = _RecorderState.idle;
@@ -487,12 +551,73 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     _scrollToEnd();
   }
 
+  /// Định vị từng chỗ được sửa trong transcript để gạch chân sóng ngay trong bong bóng.
+  ///
+  /// Server không gửi vị trí ký tự -- nó chỉ nói "chỗ này sai" bằng chính đoạn văn bản
+  /// (`original_text`), nên client phải tự dò. Dò KHÔNG phân biệt hoa thường vì bộ nhận
+  /// dạng giọng nói viết hoa đầu câu còn LLM thì trả lại nguyên dạng nó đọc được.
+  ///
+  /// Mỗi chỗ chỉ khớp MỘT lần và không cho chồng lấn: một từ dính hai lỗi thì hai đường gạch
+  /// đè lên nhau, nhìn thành một vệt dày khó hiểu.
+  List<ErrorSpan> _spansFor(String text, List<Correction> corrections) {
+    if (text.isEmpty) return const [];
+    final lower = text.toLowerCase();
+    final taken = <int, int>{};
+    final spans = <ErrorSpan>[];
+    for (final correction in corrections) {
+      final needle = correction.before?.trim();
+      if (needle == null || needle.isEmpty) continue;
+      var from = 0;
+      while (true) {
+        final at = lower.indexOf(needle.toLowerCase(), from);
+        if (at < 0) break;
+        final end = at + needle.length;
+        final overlaps = taken.entries.any((e) => at < e.value && end > e.key);
+        if (!overlaps) {
+          taken[at] = end;
+          spans.add(
+            ErrorSpan(start: at, length: needle.length, type: correction.type),
+          );
+          break;
+        }
+        from = at + 1;
+      }
+    }
+    spans.sort((a, b) => a.start.compareTo(b.start));
+    return spans;
+  }
+
   Correction _correctionFromJson(Map<String, dynamic> json) {
+    final type = _correctionTypeFromCategory(json['category'] as String?);
+    final word = json['original_text'] as String?;
+    final phoneme = json['worst_phoneme'] as String?;
+    // Server trả accuracy thang 0..100 (Azure), model dùng 0..1 cho thanh đo.
+    final rawAccuracy = (json['accuracy'] as num?)?.toDouble();
+
+    // Dòng phát âm KHÔNG dùng dạng "trước → sau": từ viết đúng, chỉ đọc chưa chuẩn, nên
+    // mũi tên sẽ trỏ từ chính nó vào chính nó. Dựng thành một tiêu đề chỉ rõ âm sai.
+    if (type == CorrectionType.pronunciation) {
+      return Correction(
+        type: type,
+        // `before` có giá trị để _spansFor gạch chân được từ đó trong bong bóng, nhưng
+        // `after` để trống -- _CorrectionRow chỉ vẽ dạng "trước → sau" khi có ĐỦ cả hai,
+        // nên dòng này rơi về `headline`, đúng ý: từ viết không sai, chỉ đọc chưa chuẩn.
+        before: word,
+        headline: phoneme != null && phoneme.isNotEmpty
+            ? '"$word" — âm /$phoneme/ chưa rõ'
+            : '"$word" — phát âm chưa rõ',
+        note: (json['explanation'] as String?) ?? '',
+        accuracy: rawAccuracy == null ? null : rawAccuracy / 100.0,
+        worstPhoneme: phoneme,
+      );
+    }
+
     return Correction(
-      type: _correctionTypeFromCategory(json['category'] as String?),
-      before: json['original_text'] as String?,
+      type: type,
+      before: word,
       after: json['corrected_text'] as String?,
       note: (json['explanation'] as String?) ?? '',
+      isUpgrade: json['is_upgrade'] as bool? ?? false,
     );
   }
 
@@ -520,7 +645,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       return;
     }
     _pendingPromptText = null;
-    _realtimeClient.send({'type': 'present_question', 'prompt_text': promptText});
+    _realtimeClient.send({
+      'type': 'present_question',
+      'prompt_text': promptText,
+    });
     _hasSpokenThisTurn = false;
     _speakingNow = false;
     _speechStartedAt = null;
@@ -557,9 +685,23 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
 
   // ── Mic mute toggle (NOT start/stop recording anymore) ──────────────────
 
-  void _toggleMute() {
+  /// Push-to-talk: chỉ gửi tiếng khi học sinh ĐANG giữ nút.
+  ///
+  /// Trước đây mic gửi liên tục và `_muted` mặc định false, nên loa phát câu hỏi ra thì mic
+  /// thu lại chính giọng AI và đẩy lên server làm câu trả lời. Cơ chế `ready_to_answer` chỉ
+  /// dọn buffer SAU khi AI nói xong, không chặn được tiếng lọt vào lúc đang nói.
+  ///
+  /// Giữ nút = mở tiếng. Thả ra là im ngay, kể cả khi AI đang nói, nên không còn đường nào
+  /// để tiếng loa quay ngược vào bản ghi.
+  /// Giữ nút = mở mic. Chỉ điều khiển ĐƯỜNG TIẾNG, không quyết định ranh giới lượt nói --
+  /// việc đó vẫn do VAD + thời gian ân hạn lo (xem _handleSpeechEnd).
+  void _startTalking() {
     if (_recorderState == _RecorderState.processing) return;
-    setState(() => _muted = !_muted);
+    setState(() => _muted = false);
+  }
+
+  void _stopTalking() {
+    if (!_muted) setState(() => _muted = true);
   }
 
   /// dBFS (roughly -45..0) → 0..1.
@@ -596,10 +738,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     if (!mounted) return;
     await Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => SessionSummaryScreen(
-          sessionId: session.id,
-          recordingPath: null,
-        ),
+        builder: (_) =>
+            SessionSummaryScreen(sessionId: session.id),
       ),
     );
   }
@@ -668,12 +808,26 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     return leave ?? false;
   }
 
+  /// Thoát phiên. Đã nói được ít nhất một lượt thì ĐI TỚI MÀN TỔNG KẾT, không quay lui.
+  ///
+  /// Trước đây luôn `pop()`, nên học sinh nói xong bấm thoát là mất luôn phần kết quả --
+  /// màn tổng kết chỉ tới được khi SERVER tự kết thúc phiên (hết quota, hoặc lưu lượt hỏng),
+  /// tức chỉ ở những đường không ai mong muốn. Nói xong rồi rời đi là đường bình thường
+  /// nhất, mà lại là đường duy nhất không xem được mình làm thế nào.
+  ///
+  /// Chưa nói câu nào thì vẫn quay lui: không có gì để tổng kết, mở ra một màn trống chỉ
+  /// khiến học sinh phải bấm thêm một lần nữa để thoát.
   Future<void> _handleExitRequest() async {
     final leave = await _confirmExit();
     if (!mounted || !leave) return;
+    final spoke = _visible.any((t) => t.speaker == Speaker.student);
     await _endSession(clientInitiated: true);
     if (!mounted) return;
-    Navigator.of(context).pop();
+    if (!spoke) {
+      Navigator.of(context).pop();
+      return;
+    }
+    await _finish();
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -694,7 +848,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
             children: [
               _SessionHeader(
                 title: widget.topic.title,
-                elapsed: _elapsed,
+                spokenSeconds: _spokenSeconds + _liveSpokenSeconds,
+                budgetSeconds: _budgetSeconds,
                 focusTags: _session?.focusTags ?? widget.topic.focusTags,
                 onClose: _handleExitRequest,
               ),
@@ -708,7 +863,27 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   }
 
   Widget _buildBody(AppLocalizations l10n) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            if (_preparingQuestions) ...[
+              const SizedBox(height: 16),
+              Text(
+                l10n.pzPreparingQuestions,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textFaint,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
     if (_error != null) {
       return Center(
         child: Padding(
@@ -719,8 +894,10 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
               Text(
                 '${l10n.pzLoadError}\n$_error',
                 textAlign: TextAlign.center,
-                style:
-                    const TextStyle(fontSize: 13, color: AppColors.textFaint),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textFaint,
+                ),
               ),
               const SizedBox(height: 12),
               TextButton(onPressed: _load, child: Text(l10n.pzRetry)),
@@ -743,18 +920,26 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         // footer) once that's arrived, not gated on corrections being non-empty like the
         // old scripted mock, or there'd be no way to advance on a clean turn.
         final isLatestStudentTurn =
-            index == _visible.lastIndexWhere((t) => t.speaker == Speaker.student);
-        final showContinue = isLatestStudentTurn &&
+            index ==
+            _visible.lastIndexWhere((t) => t.speaker == Speaker.student);
+        // Footer điều hướng chỉ thuộc về lượt mới nhất...
+        final showContinue =
+            isLatestStudentTurn &&
             _recorderState == _RecorderState.idle &&
             !_sessionEnded;
+        // ...còn THẺ SỬA thì mọi lượt đã được chấm đều giữ lại. Trước đây cả thẻ gắn với
+        // `showContinue`, nên bấm "Tiếp tục" là phần sửa của những câu trước biến mất khỏi
+        // màn hình dù dữ liệu vẫn còn trong _visible -- học sinh không xem lại được.
+        final hasCorrectionCard = turn.correctionsArrived;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _StudentBubble(turn: turn),
-            if (showContinue) ...[
+            if (hasCorrectionCard) ...[
               const SizedBox(height: 12),
               CorrectionCard(
                 turn: turn,
+                showContinue: showContinue,
                 onHearCorrect: () => _toast(l10n.pzSessionNoSampleAudio),
                 onContinue: _handleContinue,
                 continueReady: _continueReady,
@@ -789,15 +974,28 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       ),
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
-              color: AppColors.fieldBg,
-              shape: BoxShape.circle,
+          // Nút KẾT THÚC & xem kết quả. Chỗ này trước là một hình tròn `more_horiz` chết,
+          // không gắn hành động nào -- nên trong lúc luyện học sinh không có cách nào chủ
+          // động nộp bài, phải chờ server tự kết thúc phiên mới thấy được kết quả.
+          Semantics(
+            button: true,
+            label: 'Kết thúc phiên và xem kết quả',
+            child: GestureDetector(
+              onTap: processing ? null : _handleExitRequest,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: processing ? AppColors.fieldBg : AppColors.chipBlueBg,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.check,
+                  size: 21,
+                  color: processing ? AppColors.textGhost : AppColors.indigo,
+                ),
+              ),
             ),
-            child: const Icon(Icons.more_horiz,
-                size: 21, color: Color(0xFF555555)),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -839,8 +1037,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
                     recording
                         ? l10n.pzSessionRecording
                         : processing
-                            ? l10n.pzSessionThinking
-                            : l10n.pzSessionTapToSpeak,
+                        ? l10n.pzSessionThinking
+                        : l10n.pzSessionTapToSpeak,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -859,7 +1057,8 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
             pulse: _pulse,
             recording: recording,
             enabled: !processing,
-            onTap: _toggleMute,
+            onPressStart: _startTalking,
+            onPressEnd: _stopTalking,
           ),
         ],
       ),
@@ -870,15 +1069,26 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
 class _SessionHeader extends StatelessWidget {
   const _SessionHeader({
     required this.title,
-    required this.elapsed,
+    required this.spokenSeconds,
+    required this.budgetSeconds,
     required this.focusTags,
     required this.onClose,
   });
 
   final String title;
-  final int elapsed;
+
+  /// Số giây học sinh THẬT SỰ nói, không phải thời gian trôi từ lúc mở phiên.
+  final int spokenSeconds;
+
+  /// Trần nói của phiên; 0 = chưa biết, lúc đó chỉ hiện số đã nói, không vẽ mẫu số/thanh.
+  final int budgetSeconds;
+
   final List<String> focusTags;
   final VoidCallback onClose;
+
+  /// Đổi màu từ 85% ngân sách để học sinh kịp gói ý lại, thay vì phiên đóng đột ngột.
+  bool get _nearBudget =>
+      budgetSeconds > 0 && spokenSeconds >= budgetSeconds * 0.85;
 
   @override
   Widget build(BuildContext context) {
@@ -902,7 +1112,11 @@ class _SessionHeader extends StatelessWidget {
               ),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.auto_awesome, size: 19, color: Colors.white),
+            child: const Icon(
+              Icons.auto_awesome,
+              size: 19,
+              color: Colors.white,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -921,13 +1135,32 @@ class _SessionHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 1),
                 Text(
-                  l10n.pzSessionLive(formatClock(elapsed)),
-                  style: const TextStyle(
+                  budgetSeconds > 0
+                      ? l10n.pzSessionSpoken(
+                          formatClock(spokenSeconds),
+                          formatClock(budgetSeconds),
+                        )
+                      : l10n.pzSessionLive(formatClock(spokenSeconds)),
+                  style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.success,
+                    color: _nearBudget ? AppColors.warning : AppColors.success,
                   ),
                 ),
+                if (budgetSeconds > 0) ...[
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: (spokenSeconds / budgetSeconds).clamp(0.0, 1.0),
+                      minHeight: 3,
+                      backgroundColor: AppColors.border,
+                      valueColor: AlwaysStoppedAnimation(
+                        _nearBudget ? AppColors.warning : AppColors.success,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1035,23 +1268,32 @@ class _StudentBubble extends StatelessWidget {
   }
 }
 
+/// Nút giữ-để-nói (push-to-talk).
+///
+/// Dùng onTapDown/onTapUp/onTapCancel chứ không onTap: cần biết lúc NHẤN và lúc THẢ, còn
+/// onTap chỉ báo sau khi đã thả nên không mở được tiếng trong lúc giữ. onTapCancel bắt trường
+/// hợp học sinh kéo ngón ra khỏi nút -- thiếu nó thì mic kẹt ở trạng thái mở.
 class _MicButton extends StatelessWidget {
   const _MicButton({
     required this.pulse,
     required this.recording,
     required this.enabled,
-    required this.onTap,
+    required this.onPressStart,
+    required this.onPressEnd,
   });
 
   final Animation<double> pulse;
   final bool recording;
   final bool enabled;
-  final VoidCallback onTap;
+  final VoidCallback onPressStart;
+  final VoidCallback onPressEnd;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: enabled ? onTap : null,
+      onTapDown: enabled ? (_) => onPressStart() : null,
+      onTapUp: enabled ? (_) => onPressEnd() : null,
+      onTapCancel: enabled ? onPressEnd : null,
       child: AnimatedBuilder(
         animation: pulse,
         builder: (_, child) {
@@ -1073,8 +1315,10 @@ class _MicButton extends StatelessWidget {
             child: child,
           );
         },
+        // mic khi ĐANG thu (giữ nút), mic_none khi đang im -- nút `stop` cũ mang nghĩa "bấm
+        // để dừng", sai với push-to-talk vì thả tay là dừng chứ không bấm lần nữa.
         child: Icon(
-          recording ? Icons.stop : Icons.mic,
+          recording ? Icons.mic : Icons.mic_none,
           size: 26,
           color: Colors.white,
         ),

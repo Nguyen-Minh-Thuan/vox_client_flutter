@@ -154,17 +154,17 @@ String formatDelta(double delta) =>
 
 /// The white "card" surface used across the summary / profile screens.
 BoxDecoration get cardDecoration => BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0xFFE2E8F0)),
-    );
+  color: Colors.white,
+  borderRadius: BorderRadius.circular(16),
+  border: Border.all(color: const Color(0xFFE2E8F0)),
+);
 
 /// The lighter bordered row used on the home and list screens.
 BoxDecoration get rowDecoration => BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: AppColors.border, width: 1.5),
-    );
+  color: Colors.white,
+  borderRadius: BorderRadius.circular(14),
+  border: Border.all(color: AppColors.border, width: 1.5),
+);
 
 /// Standard page padding for the personalize screens.
 const pagePadding = EdgeInsets.fromLTRB(20, 16, 20, 24);

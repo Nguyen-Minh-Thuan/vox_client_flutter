@@ -348,7 +348,9 @@ class MeterRow extends StatelessWidget {
         if (value != null) ...[
           const SizedBox(width: 10),
           SizedBox(
-            width: 30,
+            // Đủ chỗ cho 3 chữ số: thang rubric là 0-100, không phải 0-10. Rộng 30 thì "87.8"
+            // xuống dòng thành "87." / "8".
+            width: 38,
             child: Text(
               value!,
               textAlign: TextAlign.right,

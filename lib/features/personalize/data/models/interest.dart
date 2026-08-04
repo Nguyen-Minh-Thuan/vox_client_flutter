@@ -64,7 +64,8 @@ class Interest {
     final lastMentionedAt = json['lastMentionedAt'] == null
         ? null
         : DateTime.tryParse(json['lastMentionedAt'] as String);
-    final cooling = lastMentionedAt == null ||
+    final cooling =
+        lastMentionedAt == null ||
         DateTime.now().difference(lastMentionedAt).inDays > _coolingCutoffDays;
     return Interest(
       id: json['topicId'] as String,

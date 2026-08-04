@@ -734,6 +734,12 @@ abstract class AppLocalizations {
   /// **'Practice'**
   String get navPractice;
 
+  /// No description provided for @pzPreparingQuestions.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing questions for this topic…\nThis takes about 10-20 seconds the first time.'**
+  String get pzPreparingQuestions;
+
   /// No description provided for @pzRetry.
   ///
   /// In en, this message translates to:
@@ -776,6 +782,12 @@ abstract class AppLocalizations {
   /// **'Advanced'**
   String get pzLevelAdvanced;
 
+  /// No description provided for @pzLevelWithPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Level: {level}'**
+  String pzLevelWithPrefix(String level);
+
   /// No description provided for @pzHomeSessionToday.
   ///
   /// In en, this message translates to:
@@ -791,8 +803,8 @@ abstract class AppLocalizations {
   /// No description provided for @pzHomeSessionMeta.
   ///
   /// In en, this message translates to:
-  /// **'{minutes} min · 1-on-1 conversation · focus:'**
-  String pzHomeSessionMeta(int minutes);
+  /// **'1-on-1 conversation · focus:'**
+  String get pzHomeSessionMeta;
 
   /// No description provided for @pzHomeStartSpeaking.
   ///
@@ -847,6 +859,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Suggested for you'**
   String get pzHomeSuggestions;
+
+  /// No description provided for @pzPreparingTopics.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding topics that fit you…'**
+  String get pzPreparingTopics;
+
+  /// No description provided for @pzPreparingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The first time takes a little longer while we write new ones.'**
+  String get pzPreparingHint;
+
+  /// No description provided for @pzTopicsPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'We are putting your profile together'**
+  String get pzTopicsPreparing;
+
+  /// No description provided for @pzTopicsPreparingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your topics are being written from the survey you just finished. Come back in a minute or two.'**
+  String get pzTopicsPreparingBody;
+
+  /// No description provided for @pzTopicsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload'**
+  String get pzTopicsRefresh;
 
   /// No description provided for @pzTopicsTitle.
   ///
@@ -943,6 +985,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Why?'**
   String get pzTopicsWhy;
+
+  /// Practice session header: seconds the student actually spoke vs the session speaking budget. Not a wall clock -- AI speech and thinking time are not counted.
+  ///
+  /// In en, this message translates to:
+  /// **'Spoken · {spoken} / {budget}'**
+  String pzSessionSpoken(String spoken, String budget);
 
   /// No description provided for @pzSessionLive.
   ///
@@ -1094,6 +1142,24 @@ abstract class AppLocalizations {
   /// **'weight · score /10'**
   String get pzSummaryRubricLegend;
 
+  /// No description provided for @pzSummaryPronunciation.
+  ///
+  /// In en, this message translates to:
+  /// **'Words to work on'**
+  String get pzSummaryPronunciation;
+
+  /// No description provided for @pzSummaryPronunciationEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No word scored below the threshold this session.'**
+  String get pzSummaryPronunciationEmpty;
+
+  /// Weakest phoneme in a mispronounced word -- the exact spot that went wrong.
+  ///
+  /// In en, this message translates to:
+  /// **'/{phoneme}/ · {percent}%'**
+  String pzSummaryWorstPhoneme(String phoneme, String percent);
+
   /// No description provided for @pzSummaryRepeatedErrors.
   ///
   /// In en, this message translates to:
@@ -1111,6 +1177,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Replay my recording'**
   String get pzSummaryReplay;
+
+  /// No description provided for @pzLearningProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning profile'**
+  String get pzLearningProfile;
+
+  /// No description provided for @pzLearningProfileHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Average score and recent sessions'**
+  String get pzLearningProfileHint;
 
   /// No description provided for @pzWeaknessTitle.
   ///
@@ -1169,19 +1247,19 @@ abstract class AppLocalizations {
   /// No description provided for @pzWeaknessSevere.
   ///
   /// In en, this message translates to:
-  /// **'SEVERE'**
+  /// **'HIGH PRIORITY'**
   String get pzWeaknessSevere;
 
   /// No description provided for @pzWeaknessMedium.
   ///
   /// In en, this message translates to:
-  /// **'MODERATE'**
+  /// **'MEDIUM'**
   String get pzWeaknessMedium;
 
   /// No description provided for @pzWeaknessMild.
   ///
   /// In en, this message translates to:
-  /// **'MILD'**
+  /// **'NOT YET'**
   String get pzWeaknessMild;
 
   /// No description provided for @pzHistoryTitle.

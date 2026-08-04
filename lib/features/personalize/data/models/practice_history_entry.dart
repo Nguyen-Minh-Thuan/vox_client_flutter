@@ -33,8 +33,12 @@ class PracticeHistoryEntry {
       status: json['status'] as String? ?? '',
       overallScore: (json['overallScore'] as num?)?.toDouble(),
       gradedSeconds: (json['gradedSeconds'] as num?)?.toInt() ?? 0,
-      startedAt: json['startedAt'] == null ? null : DateTime.tryParse(json['startedAt'] as String),
-      endedAt: json['endedAt'] == null ? null : DateTime.tryParse(json['endedAt'] as String),
+      startedAt: json['startedAt'] == null
+          ? null
+          : DateTime.tryParse(json['startedAt'] as String),
+      endedAt: json['endedAt'] == null
+          ? null
+          : DateTime.tryParse(json['endedAt'] as String),
     );
   }
 }

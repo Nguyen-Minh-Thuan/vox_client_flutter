@@ -79,56 +79,58 @@ class _PracticeHomeScreenState extends State<PracticeHomeScreen> {
         Expanded(
           child: switch ((_loading, _error, dashboard)) {
             (true, _, _) => const Center(child: CircularProgressIndicator()),
-            (_, final String error, _) =>
-              PersonalizeErrorView(detail: error, onRetry: _load),
+            (_, final String error, _) => PersonalizeErrorView(
+              detail: error,
+              onRetry: _load,
+            ),
             (_, _, null) => PersonalizeErrorView(onRetry: _load),
             (_, _, final PracticeDashboard data) => RefreshIndicator(
-                onRefresh: _load,
-                child: ListView(
-                  padding: pagePadding,
-                  children: [
-                    if (data.todayTopic != null)
-                      _TodaySessionCard(
-                        topic: data.todayTopic!,
-                        onStart: () => _openSession(data.todayTopic!),
-                        onChangeTopic: _openTopics,
-                      )
-                    else
-                      _NoTopicYetCard(onBrowse: _openTopics),
-                    const SizedBox(height: 12),
-                    _StatRow(dashboard: data),
-                    const SizedBox(height: 22),
-                    _SectionHeader(
-                      label: l10n.pzHomeWeeklyFocus,
-                      action: l10n.pzHomeViewProfile,
-                      onAction: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const WeaknessProfileScreen(),
-                        ),
+              onRefresh: _load,
+              child: ListView(
+                padding: pagePadding,
+                children: [
+                  if (data.todayTopic != null)
+                    _TodaySessionCard(
+                      topic: data.todayTopic!,
+                      onStart: () => _openSession(data.todayTopic!),
+                      onChangeTopic: _openTopics,
+                    )
+                  else
+                    _NoTopicYetCard(onBrowse: _openTopics),
+                  const SizedBox(height: 12),
+                  _StatRow(dashboard: data),
+                  const SizedBox(height: 22),
+                  _SectionHeader(
+                    label: l10n.pzHomeWeeklyFocus,
+                    action: l10n.pzHomeViewProfile,
+                    onAction: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const WeaknessProfileScreen(),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    for (final weakness in data.weeklyFocus) ...[
-                      _FocusRow(weakness: weakness),
-                      const SizedBox(height: 8),
-                    ],
-                    const SizedBox(height: 14),
-                    _SectionHeader(
-                      label: l10n.pzHomeSuggestions,
-                      action: l10n.pzSeeAll,
-                      onAction: _openTopics,
-                    ),
-                    const SizedBox(height: 10),
-                    for (final topic in data.suggestions) ...[
-                      _SuggestionCard(
-                        topic: topic,
-                        onTap: () => _openSession(topic),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  for (final weakness in data.weeklyFocus) ...[
+                    _FocusRow(weakness: weakness),
+                    const SizedBox(height: 8),
                   ],
-                ),
+                  const SizedBox(height: 14),
+                  _SectionHeader(
+                    label: l10n.pzHomeSuggestions,
+                    action: l10n.pzSeeAll,
+                    onAction: _openTopics,
+                  ),
+                  const SizedBox(height: 10),
+                  for (final topic in data.suggestions) ...[
+                    _SuggestionCard(
+                      topic: topic,
+                      onTap: () => _openSession(topic),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ],
               ),
+            ),
           },
         ),
       ],
@@ -188,8 +190,11 @@ class _Header extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.local_fire_department,
-                    size: 17, color: AppColors.chipOrangeFg),
+                const Icon(
+                  Icons.local_fire_department,
+                  size: 17,
+                  color: AppColors.chipOrangeFg,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   '$streakDays',
@@ -289,8 +294,7 @@ class _TodaySessionCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.secondary.withValues(alpha: 0.22),
                   borderRadius: BorderRadius.circular(99),
@@ -319,7 +323,7 @@ class _TodaySessionCard extends StatelessWidget {
           const SizedBox(height: 5),
           Text.rich(
             TextSpan(
-              text: '${l10n.pzHomeSessionMeta(topic.minutes)} ',
+              text: '${l10n.pzHomeSessionMeta} ',
               children: [
                 for (int i = 0; i < topic.focusTags.length; i++) ...[
                   if (i > 0) const TextSpan(text: ', '),
@@ -399,7 +403,11 @@ class _PillButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 17, color: filled ? AppColors.ink : Colors.white),
+                Icon(
+                  icon,
+                  size: 17,
+                  color: filled ? AppColors.ink : Colors.white,
+                ),
                 const SizedBox(width: 7),
               ],
               Flexible(
@@ -515,11 +523,7 @@ class _FocusRow extends StatelessWidget {
               color: colors.bg,
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(
-              Icons.history_edu,
-              size: 19,
-              color: colors.fg,
-            ),
+            child: Icon(Icons.history_edu, size: 19, color: colors.fg),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -580,7 +584,11 @@ class _SuggestionCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Icon(Icons.chevron_right, size: 18, color: Color(0xFFCCCCCC)),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: Color(0xFFCCCCCC),
+                ),
               ],
             ),
             const SizedBox(height: 8),
