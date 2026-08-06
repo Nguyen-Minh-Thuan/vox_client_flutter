@@ -360,20 +360,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get pzLevelBeginner => 'Cơ bản';
-
-  @override
-  String get pzLevelIntermediate => 'Trung cấp';
-
-  @override
-  String get pzLevelAdvanced => 'Nâng cao';
-
-  @override
-  String pzLevelWithPrefix(String level) {
-    return 'Mức độ: $level';
-  }
-
-  @override
   String get pzHomeSessionToday => 'PHIÊN HÔM NAY';
 
   @override
@@ -403,9 +389,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pzHomeWeeklyFocus => 'Tập trung tuần này';
-
-  @override
-  String get pzHomeViewProfile => 'Xem hồ sơ';
 
   @override
   String get pzHomeSuggestions => 'Gợi ý cho bạn';
@@ -602,35 +585,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get pzLearningProfileHint => 'Điểm trung bình và các buổi gần đây';
 
   @override
-  String get pzWeaknessTitle => 'Hồ sơ điểm yếu';
-
-  @override
-  String get pzWeaknessRange => '30 ngày';
-
-  @override
-  String pzWeaknessFromSessions(int count) {
-    return 'Tổng hợp từ $count buổi nói';
-  }
-
-  @override
-  String get pzWeaknessTracked => 'Điểm yếu đang theo';
-
-  @override
-  String get pzWeaknessNearlyFixed => 'Sắp khắc phục';
-
-  @override
-  String get pzWeaknessNewlyFound => 'Mới phát hiện';
-
-  @override
-  String get pzWeaknessGrammar => 'Ngữ pháp';
-
-  @override
-  String get pzWeaknessPronunciation => 'Phát âm';
-
-  @override
-  String get pzWeaknessExpression => 'Diễn đạt';
-
-  @override
   String get pzWeaknessSevere => 'ƯU TIÊN CAO';
 
   @override
@@ -644,77 +598,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pzHistoryEmpty => 'Chưa có phiên luyện tập nào';
-
-  @override
-  String pzWeaknessObservations(int count) {
-    return '$count lần quan sát';
-  }
-
-  @override
-  String pzWeaknessOccurrences(int count) {
-    return '$count lần lặp lại';
-  }
-
-  @override
-  String get pzWeaknessBuildSession => 'Tạo buổi luyện từ 3 điểm yếu đầu';
-
-  @override
-  String get pzInterestsTitle => 'Sở thích của bạn';
-
-  @override
-  String get pzInterestsDiscovered => 'MÌNH PHÁT HIỆN THÊM';
-
-  @override
-  String pzInterestsConfidence(int percent) {
-    return 'độ chắc $percent%';
-  }
-
-  @override
-  String get pzInterestsAdd => 'Thêm vào sở thích';
-
-  @override
-  String get pzInterestsDismiss => 'Bỏ qua';
-
-  @override
-  String get pzInterestsActive => 'Đang hoạt động';
-
-  @override
-  String get pzInterestsEdit => 'Sửa';
-
-  @override
-  String get pzInterestsCooling => 'Đang nguội dần';
-
-  @override
-  String get pzInterestsKeep => 'Giữ lại';
-
-  @override
-  String get pzInterestsAutoUpdate => 'Tự cập nhật theo hành vi';
-
-  @override
-  String get pzInterestsAutoUpdateBody =>
-      'Cho phép mình đổi chủ đề gợi ý dựa trên điều bạn hay nói.';
-
-  @override
-  String get pzInterestsFooter =>
-      'Mọi thay đổi đều hiển thị ở đây trước khi ảnh hưởng tới bài luyện.';
-
-  @override
-  String get pzProgressTitle => 'Tiến độ';
-
-  @override
-  String get pzProgressRangeFourWeeks => '4 tuần';
-
-  @override
-  String get pzProgressRangeThreeMonths => '3 tháng';
-
-  @override
-  String get pzProgressRangeAll => 'Tất cả';
-
-  @override
-  String get pzProgressAverage => 'Điểm trung bình';
-
-  @override
-  String get pzProgressRecentSessions => 'Buổi gần đây';
 
   @override
   String get pzOnboardingIntroTitle => 'Cùng dựng hồ sơ nói của bạn';

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../l10n/app_localizations.dart';
 import '../data/models/practice_session.dart';
-import '../data/models/practice_topic.dart';
 import '../data/models/weakness.dart';
 
 /// Resolves the icon names carried by the models onto Material icons.
@@ -127,17 +126,6 @@ Color severityBarColor(WeaknessSeverity severity) {
       return AppColors.warning;
     case WeaknessSeverity.mild:
       return AppColors.muted;
-  }
-}
-
-String levelLabel(AppLocalizations l10n, TopicLevel level) {
-  switch (level) {
-    case TopicLevel.beginner:
-      return l10n.pzLevelBeginner;
-    case TopicLevel.intermediate:
-      return l10n.pzLevelIntermediate;
-    case TopicLevel.advanced:
-      return l10n.pzLevelAdvanced;
   }
 }
 

@@ -360,20 +360,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get pzLevelBeginner => 'Beginner';
-
-  @override
-  String get pzLevelIntermediate => 'Intermediate';
-
-  @override
-  String get pzLevelAdvanced => 'Advanced';
-
-  @override
-  String pzLevelWithPrefix(String level) {
-    return 'Level: $level';
-  }
-
-  @override
   String get pzHomeSessionToday => 'TODAY\'S SESSION';
 
   @override
@@ -403,9 +389,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pzHomeWeeklyFocus => 'This week\'s focus';
-
-  @override
-  String get pzHomeViewProfile => 'View profile';
 
   @override
   String get pzHomeSuggestions => 'Suggested for you';
@@ -604,35 +587,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pzLearningProfileHint => 'Average score and recent sessions';
 
   @override
-  String get pzWeaknessTitle => 'Weak-spot profile';
-
-  @override
-  String get pzWeaknessRange => '30 days';
-
-  @override
-  String pzWeaknessFromSessions(int count) {
-    return 'Compiled from $count sessions';
-  }
-
-  @override
-  String get pzWeaknessTracked => 'Tracked';
-
-  @override
-  String get pzWeaknessNearlyFixed => 'Nearly fixed';
-
-  @override
-  String get pzWeaknessNewlyFound => 'Newly found';
-
-  @override
-  String get pzWeaknessGrammar => 'Grammar';
-
-  @override
-  String get pzWeaknessPronunciation => 'Pronunciation';
-
-  @override
-  String get pzWeaknessExpression => 'Expression';
-
-  @override
   String get pzWeaknessSevere => 'HIGH PRIORITY';
 
   @override
@@ -646,77 +600,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pzHistoryEmpty => 'No practice sessions yet';
-
-  @override
-  String pzWeaknessObservations(int count) {
-    return '$count observations';
-  }
-
-  @override
-  String pzWeaknessOccurrences(int count) {
-    return '$count occurrences';
-  }
-
-  @override
-  String get pzWeaknessBuildSession => 'Build a session from the top 3';
-
-  @override
-  String get pzInterestsTitle => 'Your interests';
-
-  @override
-  String get pzInterestsDiscovered => 'I NOTICED SOMETHING';
-
-  @override
-  String pzInterestsConfidence(int percent) {
-    return '$percent% confident';
-  }
-
-  @override
-  String get pzInterestsAdd => 'Add to interests';
-
-  @override
-  String get pzInterestsDismiss => 'Not now';
-
-  @override
-  String get pzInterestsActive => 'Active';
-
-  @override
-  String get pzInterestsEdit => 'Edit';
-
-  @override
-  String get pzInterestsCooling => 'Cooling down';
-
-  @override
-  String get pzInterestsKeep => 'Keep it';
-
-  @override
-  String get pzInterestsAutoUpdate => 'Update automatically';
-
-  @override
-  String get pzInterestsAutoUpdateBody =>
-      'Let me change the suggested topics based on what you actually talk about.';
-
-  @override
-  String get pzInterestsFooter =>
-      'Every change shows up here before it affects your practice.';
-
-  @override
-  String get pzProgressTitle => 'Progress';
-
-  @override
-  String get pzProgressRangeFourWeeks => '4 weeks';
-
-  @override
-  String get pzProgressRangeThreeMonths => '3 months';
-
-  @override
-  String get pzProgressRangeAll => 'All time';
-
-  @override
-  String get pzProgressAverage => 'Average score';
-
-  @override
-  String get pzProgressRecentSessions => 'Recent sessions';
 
   @override
   String get pzOnboardingIntroTitle => 'Let\'s build your speaking profile';

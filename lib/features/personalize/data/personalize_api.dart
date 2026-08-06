@@ -1,5 +1,5 @@
 import '../../../core/network/graphql_client.dart';
-import 'models/learner_band.dart';
+import 'models/practice_band_option.dart';
 
 /// Real GraphQL calls backing [PersonalizeRepository] — topic-selection
 /// queries plus saved-topics and dashboard stats (`practice-planning.graphqls`).
@@ -16,7 +16,6 @@ class PersonalizeApi {
     savedByMe
     matchPercent
     minutes
-    level
     rationale
     reasons
     focusTags
@@ -166,8 +165,12 @@ class PersonalizeApi {
   /// Pha 1 của luồng 2 pha: trả về ngay `PracticePaperDraft`. `status=READY` khi kho câu hỏi đã
   /// có sẵn câu phù hợp (đường thường gặp, vài chục ms); `status=PREPARING` khi phải nhờ AI sinh
   /// câu mới (10-20s) -- lúc đó gọi tiếp [practicePaperDraft] để hỏi lại.
+  ///
+  /// [targetFrameworkBandId] là bậc học sinh chọn ở ô độ khó. Bắt buộc: hệ thống không còn
+  /// tự suy ra bậc từ điểm bài chấm nữa, nên không có giá trị nào đúng thay cho học sinh.
   Future<Map<String, dynamic>> buildPracticePaper({
     required String topicId,
+    required String targetFrameworkBandId,
     required String origin,
     String? fromSubAttribute,
     List<String>? offeredTopicIds,
@@ -184,6 +187,7 @@ class PersonalizeApi {
       variables: {
         'input': {
           'topicId': topicId,
+          'targetFrameworkBandId': targetFrameworkBandId,
           'origin': origin,
           'fromSubAttribute': fromSubAttribute,
           'offeredTopicIds': offeredTopicIds,
@@ -301,27 +305,36 @@ class PersonalizeApi {
     return profile?['goalType'] as String?;
   }
 
-  /// Maps to `myLearnerProfile { …band fields }` — bậc hiện tại và bậc mục tiêu.
+  /// Maps to `myPracticeBandOptions` + `myLearnerProfile { targetFrameworkBandCode }`.
   ///
-  /// Backend đã có sẵn ba field này từ lâu (practice.graphqls:86), client chỉ chưa đọc.
-  /// `estimatedFrameworkBandCode` là nullable: null nghĩa là chưa đủ 5 lượt chấm.
-  Future<LearnerBand> getLearnerBand() async {
+  /// Trả về cả thang bậc của khung đang áp (cho ô chọn độ khó) và mã bậc mục tiêu của
+  /// trường (để chọn sẵn một mục thay vì bắt học sinh nhìn danh sách trống).
+  Future<({List<PracticeBandOption> options, String? defaultCode})>
+      getPracticeBandOptions() async {
     final data = await _client.query('''
-      query MyLearnerBand {
+      query MyPracticeBandOptions {
+        myPracticeBandOptions {
+          id
+          code
+          label
+          description
+          order
+        }
         myLearnerProfile {
-          estimatedFrameworkBandCode
           targetFrameworkBandCode
-          targetFrameworkBandLabel
-          targetBandAttainmentPercent
         }
       }
     ''');
 
+    final rows = (data['myPracticeBandOptions'] as List? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(PracticeBandOption.fromJson)
+        .toList();
     final profile = data['myLearnerProfile'] as Map<String, dynamic>?;
-    if (profile == null) {
-      throw StateError('myLearnerProfile trả về null');
-    }
-    return LearnerBand.fromJson(profile);
+    return (
+      options: rows,
+      defaultCode: profile?['targetFrameworkBandCode'] as String?,
+    );
   }
 
   /// Maps to `setPracticeGoal(goalType)` — goalType is `EXAM_PREP` or `ABILITY_IMPROVEMENT`.
@@ -425,25 +438,12 @@ class PersonalizeApi {
       query MyWeaknessProfile {
         myWeaknessProfile {
           sessionsAnalysed
-          nearlyFixed
-          newlyFound
           criteria {
             criterionCode
             criterionName
             weakness
             observationCount
             reliable
-          }
-          subAttributes {
-            criterionCode
-            subAttribute
-            occurrenceCount
-            severity
-            practiceable
-            trendPercent
-            nearlyFixed
-            newlyFound
-            examples { text times }
           }
         }
       }
@@ -452,28 +452,6 @@ class PersonalizeApi {
     return data['myWeaknessProfile'] as Map<String, dynamic>;
   }
 
-  /// Maps to `myPracticeProgress(criterionCode, days)`.
-  ///
-  /// Đây là thước đo tiến bộ DUY NHẤT không co giãn theo người học: `latentLevel` =
-  /// (bậc câu trả lời thực sự khớp - 1) + phần trăm điểm trong bậc đó. Điểm phiên thì neo vào
-  /// bậc mục tiêu và độ khó câu hỏi lại bám theo bậc hiện tại, nên em giỏi lên thì câu khó lên
-  /// và điểm đứng yên. Truy vấn này có sẵn từ lâu nhưng chưa từng có ai gọi.
-  Future<List<Map<String, dynamic>>> getCriterionProgress(int days) async {
-    final data = await _client.query(
-      '''
-      query MyPracticeProgress(\$days: Int) {
-        myPracticeProgress(days: \$days) {
-          criterionCode
-          date
-          value
-          source
-        }
-      }
-    ''',
-      variables: {'days': days},
-    );
-    return (data['myPracticeProgress'] as List).cast<Map<String, dynamic>>();
-  }
 
   /// Maps to `myPracticeHistory(limit)`.
   Future<List<Map<String, dynamic>>> getPracticeHistory(int limit) async {
@@ -524,32 +502,27 @@ class PersonalizeApi {
     return data['myPracticeSessionDetail'] as Map<String, dynamic>;
   }
 
-  /// Maps to `myInterestProfile` — `topics` (real score/sessionsMentioned/lastMentionedAt)
-  /// plus `suggestions` (AI-suggested topics, status PENDING become the "discovered" cards).
-  Future<Map<String, dynamic>> getInterestProfile() async {
+  /// Maps to `myPendingTopicSuggestions` — chủ đề AI rút ra từ lời học sinh nói trong bài,
+  /// đang chờ nhận/bỏ.
+  ///
+  /// Backend sinh sau MỖI phiên (`TopicSuggestionSessionListener`) nhưng chặn khi đã có 2 gợi
+  /// ý PENDING. Không có màn nào tiêu thụ thì 2 dòng đó nằm mãi và cổng chặn khoá luôn việc
+  /// sinh tiếp — nên query này phải có người gọi thì cả tính năng mới sống.
+  Future<List<Map<String, dynamic>>> getPendingTopicSuggestions() async {
     final data = await _client.query('''
-      query MyInterestProfile {
-        myInterestProfile {
-          topics {
-            topicId
-            name
-            score
-            sessionsMentioned
-            lastMentionedAt
-          }
-          suggestions {
-            id
-            suggestedTopicName
-            interestDimension
-            confidence
-            reasonText
-            status
-          }
+      query MyPendingTopicSuggestions {
+        myPendingTopicSuggestions {
+          id
+          suggestedTopicName
+          interestDimension
+          confidence
+          reasonText
         }
       }
     ''');
 
-    return data['myInterestProfile'] as Map<String, dynamic>;
+    final suggestions = data['myPendingTopicSuggestions'] as List;
+    return suggestions.cast<Map<String, dynamic>>();
   }
 
   /// Maps to `respondToTopicSuggestion(suggestionId, accept)`.
@@ -565,36 +538,5 @@ class PersonalizeApi {
     ''',
       variables: {'suggestionId': suggestionId, 'accept': accept},
     );
-  }
-
-  /// Maps to `setInterestAutoUpdate(enabled)`.
-  Future<bool> setInterestAutoUpdate(bool enabled) async {
-    final data = await _client.query(
-      '''
-      mutation SetInterestAutoUpdate(\$enabled: Boolean!) {
-        setInterestAutoUpdate(enabled: \$enabled) {
-          interestAutoUpdateEnabled
-        }
-      }
-    ''',
-      variables: {'enabled': enabled},
-    );
-
-    final profile = data['setInterestAutoUpdate'] as Map<String, dynamic>;
-    return profile['interestAutoUpdateEnabled'] as bool;
-  }
-
-  /// Maps to `myLearnerProfile { interestAutoUpdateEnabled }`.
-  Future<bool> getInterestAutoUpdateEnabled() async {
-    final data = await _client.query('''
-      query MyLearnerProfileAutoUpdate {
-        myLearnerProfile {
-          interestAutoUpdateEnabled
-        }
-      }
-    ''');
-
-    final profile = data['myLearnerProfile'] as Map<String, dynamic>?;
-    return profile?['interestAutoUpdateEnabled'] as bool? ?? true;
   }
 }

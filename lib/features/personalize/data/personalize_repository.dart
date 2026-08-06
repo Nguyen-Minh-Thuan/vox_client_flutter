@@ -2,16 +2,14 @@ import 'dart:convert';
 
 import '../../../core/network/graphql_client.dart';
 import '../../profile/data/profile_api.dart';
-import 'models/interest.dart';
-import 'models/learner_band.dart';
+import 'models/practice_band_option.dart';
 import 'models/onboarding_question.dart';
 import 'models/practice_dashboard.dart';
 import 'models/practice_history_entry.dart';
 import 'models/practice_session.dart';
 import 'models/practice_topic.dart';
-import 'models/criterion_band_trend.dart';
-import 'models/progress_report.dart';
 import 'models/session_summary.dart';
+import 'models/topic_suggestion.dart';
 import 'models/weakness.dart';
 import 'personalize_api.dart';
 
@@ -42,7 +40,24 @@ class PersonalizeRepository {
     final history = await getPracticeHistory(limit: 50);
     final profile = await _profileApi.getProfile();
 
-    final topics = offers.map(PracticeTopic.fromOffer).toList();
+    // Trang chủ CŨNG là một lô chào thật: `todayTopic` + 4 `suggestions` đều lấy từ cùng một
+    // lượt `practiceTopicOffers`. Học sinh nhìn 5 chủ đề rồi chọn 1 -- 4 chủ đề còn lại là
+    // thông tin ÂM, đúng như lô chào ở màn chọn chủ đề.
+    //
+    // Thiếu đoạn này thì backend nhận offeredTopicIds rỗng và hai thứ cùng hỏng:
+    //   1. InterestVectorService không ghi được sự kiện OFFERED_NOT_CHOSEN nào
+    //   2. BuildPracticePaperUseCase.resolveOrigin đòi offeredTopicIds.contains(topicId) làm
+    //      điều kiện tiên quyết, nên thẻ ε-greedy vào từ đây KHÔNG BAO GIỜ được ghi
+    //      origin=EPSILON -- ghi SELECTED là dương giả (tín hiệu 0,95 như học sinh tự chọn),
+    //      và van chặn thăm dò không bao giờ đóng vì không phiếu nào mang EPSILON.
+    //
+    // Đo trên DB 2026-08-05 trước khi sửa: cả 3 phiếu đều có offered_topic_ids_json = [],
+    // 0 dòng OFFERED_NOT_CHOSEN, 0 phiếu EPSILON.
+    final offered = offers.map(PracticeTopic.fromOffer).toList();
+    final offeredIds = [for (final topic in offered) topic.id];
+    final topics = [
+      for (final topic in offered) topic.copyWith(offeredTopicIds: offeredIds),
+    ];
     final now = DateTime.now();
     final startOfWeek = DateTime(
       now.year,
@@ -75,14 +90,31 @@ class PersonalizeRepository {
 
   /// `forYou`/`byGoal`/`byWeakness` each map to a real ranking bucket on
   /// `practiceTopicOffers` (gói 11 mục 2.6b); `saved` calls `mySavedTopics`.
-  Future<List<PracticeTopic>> getTopics(TopicFilter filter) async {
+  /// [round] và [excludeTopicIds] là đường dẫn của nút "Đổi gợi ý".
+  ///
+  /// Backend đọc `round >= 2` để nâng tỉ lệ thăm dò ε từ 0,10 lên 0,30 (xem
+  /// `ViewPracticeTopicOffersUseCase`), còn `excludeTopicIds` loại thẳng những chủ đề học
+  /// sinh vừa từ chối khỏi lô mới. Trước đây client không truyền hai tham số này bao giờ,
+  /// nên bấm "đổi" (nếu có) cũng chỉ ra đúng lô cũ — và cơ chế thăm dò kẹt vĩnh viễn ở 0,10.
+  ///
+  /// Việc bị bỏ qua CŨNG là tín hiệu: chủ đề nằm trong lô mà học sinh không chọn sẽ bị hạ
+  /// điểm quan tâm (0,30 lô này / 0,20 lô trước) khi phiên sau đóng lại.
+  Future<List<PracticeTopic>> getTopics(
+    TopicFilter filter, {
+    int round = 1,
+    List<String> excludeTopicIds = const [],
+  }) async {
     if (filter == TopicFilter.saved) {
       final saved = await _api.getSavedTopics();
       return saved
           .map((json) => PracticeTopic.fromOffer(json, bucket: filter))
           .toList();
     }
-    final offers = await _api.getTopicOffers(bucket: _bucketByFilter[filter]!);
+    final offers = await _api.getTopicOffers(
+      bucket: _bucketByFilter[filter]!,
+      round: round,
+      excludeTopicIds: excludeTopicIds,
+    );
     return offers
         .map((json) => PracticeTopic.fromOffer(json, bucket: filter))
         .toList();
@@ -117,6 +149,20 @@ class PersonalizeRepository {
     return PracticeTopic.fromOffer(result.topic!, origin: 'KEYWORD');
   }
 
+  /// Gợi ý chủ đề rút ra từ lời học sinh nói trong bài, đang chờ nhận/bỏ.
+  Future<List<TopicSuggestion>> getPendingTopicSuggestions() async {
+    final rows = await _api.getPendingTopicSuggestions();
+    return rows.map(TopicSuggestion.fromJson).toList();
+  }
+
+  /// Nhận (`accept = true`) thì backend tạo `practice_topic` thật và gợi ý chuyển ACCEPTED;
+  /// bỏ thì chuyển REJECTED và tên đó vào danh sách chống đề xuất lại.
+  ///
+  /// Cả hai đều làm giảm số PENDING, tức mở lại cổng `pending >= 2` cho lượt sinh sau.
+  Future<void> respondToTopicSuggestion(String suggestionId, bool accept) {
+    return _api.respondToTopicSuggestion(suggestionId, accept);
+  }
+
   /// Bao lâu thì hỏi lại kết quả dựng đề, và bỏ cuộc sau bao lâu. Dựng đề chậm là khi phải
   /// nhờ AI sinh câu mới; pipeline fast bên Python thường xong trong ~5-8s nên 45s là dư
   /// nhưng vẫn đủ ngắn để không treo học sinh vô hạn nếu có sự cố.
@@ -140,8 +186,16 @@ class PersonalizeRepository {
       int budgetSeconds,
     })
   >
-  startSession(PracticeTopic topic, {void Function()? onPreparing}) async {
-    final paper = await _buildPaper(topic, onPreparing: onPreparing);
+  startSession(
+    PracticeTopic topic, {
+    required String targetFrameworkBandId,
+    void Function()? onPreparing,
+  }) async {
+    final paper = await _buildPaper(
+      topic,
+      targetFrameworkBandId: targetFrameworkBandId,
+      onPreparing: onPreparing,
+    );
     final questions = (paper['questions'] as List).cast<Map<String, dynamic>>();
     final firstQuestion = questions.first;
     final sessionJson = await _api.startPracticeSession(paper['id'] as String);
@@ -162,13 +216,20 @@ class PersonalizeRepository {
   /// Chạy luồng dựng đề 2 pha tới khi có đề thật, ném lỗi đọc được nếu backend báo FAILED.
   Future<Map<String, dynamic>> _buildPaper(
     PracticeTopic topic, {
+    required String targetFrameworkBandId,
     void Function()? onPreparing,
   }) async {
     // origin đi theo chủ đề (xem PracticeTopic.origin), KHÔNG cứng 'SELECTED': chủ đề do hệ
     // thống bấm hộ ("chọn giúp tôi") mà ghi như học sinh tự chọn là dương giả.
     var draft = await _api.buildPracticePaper(
       topicId: topic.id,
+      targetFrameworkBandId: targetFrameworkBandId,
       origin: topic.origin,
+      // Lô chào đi kèm chủ đề (xem PracticeTopic.offeredTopicIds): thiếu hai danh sách này
+      // thì backend không có gì để ghi tín hiệu ÂM, và hồ sơ sở thích chỉ học được từ chủ đề
+      // ĐƯỢC chọn -- mất hẳn một nửa thông tin mà thiết kế đã tính tới.
+      offeredTopicIds: topic.offeredTopicIds,
+      previousOfferedTopicIds: topic.previousOfferedTopicIds,
     );
     if (draft['status'] == 'READY') {
       return draft['paper'] as Map<String, dynamic>;
@@ -219,11 +280,13 @@ class PersonalizeRepository {
   Future<String> setPracticeGoal(String goalType) =>
       _api.setPracticeGoal(goalType);
 
-  /// Bậc hiện tại + bậc mục tiêu theo khung của trường.
+  /// Thang bậc của khung đang áp, cho ô chọn ĐỘ KHÓ trước mỗi phiên, kèm mã bậc mục tiêu
+  /// của trường để chọn sẵn một mục.
   ///
-  /// `estimatedCode` là null cho tới khi có đủ 5 lượt chấm (thi hoặc luyện) — KHÔNG lấy
-  /// bậc mục tiêu ra thế chỗ, vì mục tiêu của trường không phải trình độ của học sinh.
-  Future<LearnerBand> getLearnerBand() => _api.getLearnerBand();
+  /// Thay cho `getLearnerBand()` cũ. Hệ thống không còn ước lượng "bậc của em" từ lịch sử
+  /// chấm nữa — học sinh tự chọn độ khó muốn luyện, mỗi phiên chọn lại.
+  Future<({List<PracticeBandOption> options, String? defaultCode})>
+      getPracticeBandOptions() => _api.getPracticeBandOptions();
 
   /// Maps to `interestQuizItems` — real AI-generated forced-choice triplets,
   /// NOT `PersonalizeDemoData` (this is the cold-start interest inventory).
@@ -469,51 +532,6 @@ class PersonalizeRepository {
     return rows.map(PracticeHistoryEntry.fromJson).toList();
   }
 
-  /// Builds a [ProgressReport] from real `myPracticeHistory` rows -- see
-  /// `ProgressReport.fromHistory` for why this isn't `myPracticeProgress`.
-  /// Fetches enough history to cover 2x the widest range (`all`) so the
-  /// delta comparison always has a real previous period to diff against.
   /// Server có ghi nhận đã làm xong quiz sở thích không -- xem [PersonalizeApi].
   Future<bool> isInterestQuizCompleted() => _api.isInterestQuizCompleted();
-
-  Future<ProgressReport> getProgress(ProgressRange range) async {
-    final entries = await getPracticeHistory(limit: 200);
-    return ProgressReport.fromHistory(entries, range);
-  }
-
-  /// Diễn biến BẬC theo từng tiêu chí — xem [CriterionBandTrend] để biết vì sao cần nó bên
-  /// cạnh điểm phiên.
-  Future<List<CriterionBandTrend>> getCriterionBandTrends(
-    ProgressRange range,
-  ) async {
-    final rows = await _api.getCriterionProgress(range.days);
-    return CriterionBandTrend.fromPoints(rows);
-  }
-
-  /// Maps to `myInterestProfile{topics, suggestions}` -- `topics` become
-  /// active/cooling rows, PENDING `suggestions` become "discovered" cards.
-  Future<List<Interest>> getInterests() async {
-    final json = await _api.getInterestProfile();
-    final topics = (json['topics'] as List? ?? const [])
-        .cast<Map<String, dynamic>>()
-        .map(Interest.fromTopic);
-    final suggestions = (json['suggestions'] as List? ?? const [])
-        .cast<Map<String, dynamic>>()
-        .where((s) => s['status'] == 'PENDING')
-        .map(Interest.fromSuggestion);
-    return [...suggestions, ...topics];
-  }
-
-  /// Maps to `respondToTopicSuggestion(suggestionId, accept)`.
-  Future<void> respondToTopicSuggestion(String suggestionId, bool accept) =>
-      _api.respondToTopicSuggestion(suggestionId, accept);
-
-  /// Maps to `myLearnerProfile { interestAutoUpdateEnabled }`.
-  Future<bool> getInterestAutoUpdateEnabled() =>
-      _api.getInterestAutoUpdateEnabled();
-
-  /// Maps to `setInterestAutoUpdate(enabled)` -- returns the value actually
-  /// persisted.
-  Future<bool> setInterestAutoUpdate(bool enabled) =>
-      _api.setInterestAutoUpdate(enabled);
 }

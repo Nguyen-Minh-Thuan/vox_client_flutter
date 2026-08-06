@@ -7,11 +7,11 @@ import '../data/models/practice_dashboard.dart';
 import '../data/models/practice_topic.dart';
 import '../data/models/weakness.dart';
 import '../data/personalize_repository.dart';
+import 'band_picker_sheet.dart';
 import 'personalize_styles.dart';
 import 'personalize_widgets.dart';
 import 'practice_session_screen.dart';
 import 'practice_topics_screen.dart';
-import 'weakness_profile_screen.dart';
 
 /// Tab 2 — the personalized speaking home (design `1b`, screen 1).
 class PracticeHomeScreen extends StatefulWidget {
@@ -51,9 +51,19 @@ class _PracticeHomeScreenState extends State<PracticeHomeScreen> {
     }
   }
 
+  /// Hỏi độ khó TRƯỚC khi vào phiên. Bắt buộc phải chọn: hệ thống không còn suy ra bậc của
+  /// học sinh nữa, nên không có giá trị nào đúng thay cho em được. Đóng bảng chọn = huỷ vào
+  /// phiên, không lặng lẽ vào bằng một bậc mặc định.
   Future<void> _openSession(PracticeTopic topic) async {
+    final band = await showBandPickerSheet(context);
+    if (band == null || !mounted) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PracticeSessionScreen(topic: topic)),
+      MaterialPageRoute(
+        builder: (_) => PracticeSessionScreen(
+          topic: topic,
+          targetFrameworkBandId: band.id,
+        ),
+      ),
     );
   }
 
@@ -100,15 +110,10 @@ class _PracticeHomeScreenState extends State<PracticeHomeScreen> {
                   const SizedBox(height: 12),
                   _StatRow(dashboard: data),
                   const SizedBox(height: 22),
-                  _SectionHeader(
-                    label: l10n.pzHomeWeeklyFocus,
-                    action: l10n.pzHomeViewProfile,
-                    onAction: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const WeaknessProfileScreen(),
-                      ),
-                    ),
-                  ),
+                  // Dải "tập trung tuần này" ở lại, nhưng không còn đường vào trang hồ sơ
+                  // điểm yếu (đã xoá). Đây là chỗ duy nhất còn nói cho học sinh biết VÌ SAO
+                  // hệ thống gợi ý những chủ đề này -- bỏ nốt thì cá nhân hoá thành hộp đen.
+                  _SectionHeader(label: l10n.pzHomeWeeklyFocus),
                   const SizedBox(height: 10),
                   for (final weakness in data.weeklyFocus) ...[
                     _FocusRow(weakness: weakness),
@@ -467,15 +472,14 @@ class _StatRow extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.label,
-    required this.action,
-    required this.onAction,
-  });
+  const _SectionHeader({required this.label, this.action, this.onAction});
 
   final String label;
-  final String action;
-  final VoidCallback onAction;
+
+  /// Nhãn + hành động của đường dẫn bên phải. Bỏ trống thì chỉ hiện tiêu đề -- dải "tập
+  /// trung tuần này" giờ không còn trang chi tiết nào để dẫn tới.
+  final String? action;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -484,12 +488,13 @@ class _SectionHeader extends StatelessWidget {
       textBaseline: TextBaseline.alphabetic,
       children: [
         Expanded(child: SectionLabel(label)),
+        if (action != null && onAction != null)
         InkWell(
           onTap: onAction,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: Text(
-              action,
+              action!,
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,

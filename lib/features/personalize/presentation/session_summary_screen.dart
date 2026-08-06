@@ -109,15 +109,33 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
   }
 
   Widget _buildBody(SessionSummary summary) {
+    // Còn câu đang chấm -> KHÔNG hiện điểm.
+    //
+    // Bản trước hiện điểm ngay kèm banner "đang tổng hợp", với lập luận "phần đã chấm là
+    // thật". Nhưng `score` là điểm TRUNG BÌNH trên các câu đã chấm, không phải một phần của
+    // kết quả cuối -- chấm xong câu còn lại thì con số nhảy, và nhảy theo hướng nào cũng
+    // được. Học sinh đọc 72 rồi thấy thành 58 sẽ tin con số nào?
+    //
+    // Danh sách lỗi thì khác: chúng chỉ DÀI THÊM khi chấm xong, không đổi cái đã hiện. Nhưng
+    // đặt chúng cạnh một ô điểm trống thì đọc như thể đó là toàn bộ kết quả, nên vẫn chờ.
+    if (_waitingForGrading) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        children: [
+          _GradingBanner(
+            pendingEvaluations: summary.pendingEvaluations,
+            onLeave: () => Navigator.of(context).popUntil((r) => r.isFirst),
+          ),
+        ],
+      );
+    }
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
-        if (_waitingForGrading) ...[
-          _GradingBanner(
-            onLeave: () => Navigator.of(context).popUntil((r) => r.isFirst),
-          ),
-          const SizedBox(height: 12),
-        ] else if (_gaveUpWaiting && summary.stillGrading) ...[
+        // Quá hạn chờ mà vẫn chưa xong: lúc này hiện những gì đang có LÀ đúng -- chấm có thể
+        // hỏng thật, và để trống vô hạn thì học sinh mất trắng cả buổi luyện. Banner nói rõ
+        // con số chưa đầy đủ.
+        if (_gaveUpWaiting && summary.stillGrading) ...[
           const _GradingStalledBanner(),
           const SizedBox(height: 12),
         ],
@@ -133,13 +151,22 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
   }
 }
 
-/// "Đang tổng hợp kết quả" — hiện khi còn câu chưa chấm.
+/// "Đang chấm bài" — thứ DUY NHẤT hiện khi còn câu chưa chấm.
 ///
-/// Điểm và rubric bên dưới vẫn hiện chứ không bị che: phần đã chấm xong là thật, giấu đi chỉ
-/// khiến học sinh tưởng chưa có gì. Cái đang thiếu được nói thẳng bằng chữ, kèm lối thoát --
-/// không ai phải ngồi nhìn màn hình đợi máy.
+/// Cố ý che hết điểm phía dưới: `score` là trung bình trên các câu ĐÃ chấm, nên nó không
+/// phải một phần của kết quả cuối mà là một con số khác hẳn, sẽ nhảy khi chấm xong. Cho học
+/// sinh đọc 72 rồi đổi thành 58 thì con số nào cũng mất tin cậy.
+///
+/// Đổi lại phải nói rõ đang chờ cái gì, còn mấy câu, và cho lối thoát -- không ai phải ngồi
+/// nhìn màn hình đợi máy.
 class _GradingBanner extends StatelessWidget {
-  const _GradingBanner({required this.onLeave});
+  const _GradingBanner({
+    required this.pendingEvaluations,
+    required this.onLeave,
+  });
+
+  /// Số câu chưa chấm xong. 0 nghĩa là không biết (server chưa trả) -- lúc đó nói chung chung.
+  final int pendingEvaluations;
 
   final VoidCallback onLeave;
 
@@ -165,7 +192,9 @@ class _GradingBanner extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Đang chấm bài, kết quả sẽ tự hiện ra.',
+                  pendingEvaluations > 0
+                      ? 'Đang chấm $pendingEvaluations câu cuối, kết quả sẽ tự hiện ra.'
+                      : 'Đang chấm bài, kết quả sẽ tự hiện ra.',
                   style: const TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
@@ -177,7 +206,9 @@ class _GradingBanner extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Không cần đợi ở đây — kết quả vẫn được lưu, xem lại trong Lịch sử luyện tập bất cứ lúc nào.',
+            'Chưa hiện điểm vì còn câu chưa chấm — hiện bây giờ thì con số sẽ đổi. '
+            'Không cần đợi ở đây: kết quả vẫn được lưu, xem lại trong Lịch sử luyện tập '
+            'bất cứ lúc nào.',
             style: TextStyle(fontSize: 12.5, height: 1.35, color: AppColors.muted),
           ),
           const SizedBox(height: 4),

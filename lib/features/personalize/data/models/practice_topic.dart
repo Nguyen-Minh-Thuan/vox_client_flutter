@@ -1,9 +1,6 @@
 /// Buckets behind the filter pills on the topics screen.
 enum TopicFilter { forYou, byGoal, byWeakness, saved }
 
-/// Difficulty band shown next to the duration.
-enum TopicLevel { beginner, intermediate, advanced }
-
 /// A speaking topic the app can propose for a practice session.
 class PracticeTopic {
   final String id;
@@ -12,7 +9,6 @@ class PracticeTopic {
   /// Why this topic was picked — shown on the priority card.
   final String? rationale;
   final int minutes;
-  final TopicLevel level;
 
   /// 0..100 match score; only the top suggestion renders it.
   final int? matchPercent;
@@ -42,19 +38,62 @@ class PracticeTopic {
   /// 0.95 như học sinh tự chọn là **dương giả** -- đúng thứ thiết kế cảnh báo.
   final String origin;
 
+  /// Cả lô thẻ đang hiện lúc học sinh bấm chọn chủ đề này, và các lô đã bị "Đổi gợi ý" trước
+  /// đó. Backend dùng chúng để ghi tín hiệu ÂM cho chủ đề đã chào mà không được chọn -- 0.30
+  /// cho lô hiện tại, 0.20 cho lô trước (`InterestVectorService.recordSessionOutcome`, từ
+  /// chối hai lần thì nặng hơn một lần).
+  ///
+  /// Đi theo chủ đề vì cùng lý do với [origin]: đây là NGỮ CẢNH của lượt chào, không phải
+  /// thuộc tính của chủ đề, mà lượt chào thì chỉ màn chọn chủ đề biết. Đường vào từ thẻ
+  /// "hôm nay luyện gì" không có lô chào nào nên để rỗng -- rỗng nghĩa là *không có thông tin*,
+  /// khác hẳn với *đã chào mà bị bỏ qua*.
+  ///
+  /// Chủ đề được chọn có nằm trong [offeredTopicIds] cũng không sao: backend loại nó ra bằng
+  /// `alreadyRecorded` trước khi ghi tín hiệu âm.
+  final List<String> offeredTopicIds;
+  final List<String> previousOfferedTopicIds;
+
   const PracticeTopic({
     required this.id,
     required this.title,
     this.rationale,
     required this.minutes,
-    required this.level,
     this.matchPercent,
     this.reasons = const [],
     this.focusTags = const [],
     this.icon = 'chat_bubble_outline',
     this.buckets = const {TopicFilter.forYou},
     this.origin = 'SELECTED',
+    this.offeredTopicIds = const [],
+    this.previousOfferedTopicIds = const [],
   });
+
+  /// Bản sao đổi vài trường. Có mặt vì trước đây mỗi chỗ cần đổi một trường lại dựng tay
+  /// `PracticeTopic(...)` mới và **quên** những trường không liên quan tới việc mình đang làm
+  /// -- `_toggleSaved` chẳng hạn, đổi mỗi cờ đã lưu nhưng làm `origin` tụt về mặc định
+  /// 'SELECTED', tức tín hiệu sở thích bị ghi sai ngay sau khi học sinh bấm lưu.
+  PracticeTopic copyWith({
+    Set<TopicFilter>? buckets,
+    String? origin,
+    List<String>? offeredTopicIds,
+    List<String>? previousOfferedTopicIds,
+  }) {
+    return PracticeTopic(
+      id: id,
+      title: title,
+      rationale: rationale,
+      minutes: minutes,
+      matchPercent: matchPercent,
+      reasons: reasons,
+      focusTags: focusTags,
+      icon: icon,
+      buckets: buckets ?? this.buckets,
+      origin: origin ?? this.origin,
+      offeredTopicIds: offeredTopicIds ?? this.offeredTopicIds,
+      previousOfferedTopicIds:
+          previousOfferedTopicIds ?? this.previousOfferedTopicIds,
+    );
+  }
 
   /// Builds from the real backend shape (`PracticeTopicOffer`/`TopicSearchResult.topics`
   /// in `practice-planning.graphqls`) — see gói 11 mục 2.6b for the field-by-field mapping.
@@ -69,7 +108,6 @@ class PracticeTopic {
       title: json['name'] as String,
       rationale: json['rationale'] as String?,
       minutes: (json['minutes'] as num?)?.toInt() ?? 0,
-      level: _levelFromJson(json['level'] as String?),
       matchPercent: (json['matchPercent'] as num?)?.toInt(),
       reasons: (json['reasons'] as List<dynamic>? ?? const [])
           .map((e) => e as String)
@@ -88,7 +126,6 @@ class PracticeTopic {
       title: json['title'] as String,
       rationale: json['rationale'] as String?,
       minutes: (json['minutes'] as num?)?.toInt() ?? 0,
-      level: _levelFromJson(json['level'] as String?),
       matchPercent: (json['matchPercent'] as num?)?.toInt(),
       reasons: (json['reasons'] as List<dynamic>? ?? const [])
           .map((e) => e as String)
@@ -101,18 +138,6 @@ class PracticeTopic {
           .map((e) => _filterFromJson(e as String?))
           .toSet(),
     );
-  }
-
-  static TopicLevel _levelFromJson(String? value) {
-    switch (value) {
-      case 'BEGINNER':
-        return TopicLevel.beginner;
-      case 'ADVANCED':
-        return TopicLevel.advanced;
-      case 'INTERMEDIATE':
-      default:
-        return TopicLevel.intermediate;
-    }
   }
 
   static TopicFilter _filterFromJson(String? value) {

@@ -31,6 +31,17 @@ enum _RecorderState { idle, recording, processing }
 /// câu để nghĩ từ. Cắt sớm là chốt lượt khi họ mới nói được nửa ý.
 const _kSpeechEndGracePeriod = Duration(seconds: 5);
 
+/// Nghe xong câu hỏi mà im quá chừng này thì tính là MỘT lần khựng.
+///
+/// Không phải hết giờ: lượt vẫn mở, học sinh nghĩ bao lâu cũng được (xem `_armGracePeriodTimer`).
+/// Đây thuần tuý là **đo**, không can thiệp.
+///
+/// Chọn 10 giây: bên thi cắt lượt ở 8 giây im lặng đầu, nên dưới mốc đó là khoảng nghĩ bình
+/// thường ai cũng có. Trên 10 giây mà chưa cất tiếng thì thường là chưa nghĩ ra gì để nói,
+/// không phải đang soạn câu. **Hằng số này chưa có nguồn nghiên cứu** -- cần hiệu chỉnh khi
+/// có dữ liệu thật.
+const _kLongThinkingPause = Duration(seconds: 10);
+
 /// Design `1c` — the live 1-1 speaking session with inline corrections.
 ///
 /// Real realtime backend (gói 11): continuous PCM16 mic streaming over
@@ -40,9 +51,16 @@ const _kSpeechEndGracePeriod = Duration(seconds: 5);
 /// card. UI/widgets below are unchanged from the original mock on purpose; only the
 /// state/data layer is real now.
 class PracticeSessionScreen extends StatefulWidget {
-  const PracticeSessionScreen({super.key, required this.topic});
+  const PracticeSessionScreen({
+    super.key,
+    required this.topic,
+    required this.targetFrameworkBandId,
+  });
 
   final PracticeTopic topic;
+
+  /// Bậc học sinh chọn ở ô độ khó ngay trước khi vào phiên -- xem `showBandPickerSheet`.
+  final String targetFrameworkBandId;
 
   @override
   State<PracticeSessionScreen> createState() => _PracticeSessionScreenState();
@@ -104,6 +122,29 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
   DateTime? _speechStartedAt;
   DateTime? _speechEndedAt;
 
+  /// Mốc AI nói xong câu hỏi -- gốc để đo "học sinh nghĩ bao lâu mới cất tiếng".
+  ///
+  /// Phải tính từ đây chứ không từ lúc câu hỏi được đẩy xuống: khoảng AI đang đọc đề thì
+  /// học sinh chưa nghe hết câu hỏi, im lặng lúc đó là bình thường chứ không phải bí.
+  DateTime? _promptFinishedAt;
+
+  /// Số lần học sinh bấm "Gợi ý" trong cả phiên.
+  ///
+  /// Đây là tín hiệu **chủ động**: em tự nói ra rằng em bí. Rõ hơn nhiều so với suy từ điểm.
+  int _helpRequestCount = 0;
+
+  /// Số lượt mà học sinh im quá [_kLongThinkingPause] sau khi nghe xong câu hỏi.
+  ///
+  /// Đếm tối đa một lần mỗi lượt -- muốn đo "có bao nhiêu câu làm em khựng lại", không phải
+  /// "im lặng tổng cộng bao lâu".
+  int _longPauseCount = 0;
+  Timer? _thinkingTimer;
+
+  /// Ý gợi ý cho câu hiện tại (`PracticePaperQuestion.suggestedIdeas`). Rỗng thì nút gợi ý
+  /// vẫn bấm được và vẫn đếm là một lần xin trợ giúp -- việc em bí là có thật kể cả khi hệ
+  /// thống không có gì hay để mách.
+  List<String> _currentIdeas = const [];
+
   /// Buffered from final_transcript events for the turn currently being answered.
   final StringBuffer _liveTranscript = StringBuffer();
 
@@ -160,6 +201,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     _eventsSub?.cancel();
     _clock?.cancel();
     _turnTimer?.cancel();
+    _thinkingTimer?.cancel();
     _wave.dispose();
     _pulse.dispose();
     _scrollController.dispose();
@@ -191,7 +233,95 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     // nghĩ bao lâu tuỳ ý, lượt chỉ bắt đầu khi họ bấm giữ nút.
     if (_recorderState == _RecorderState.recording && !_hasSpokenThisTurn) {
       _realtimeClient.send({'type': 'ready_to_answer'});
+      _startThinkingWatch();
     }
+  }
+
+  /// Bắt đầu đo khoảng nghĩ của lượt này. Chỉ ĐO, không cắt lượt.
+  void _startThinkingWatch() {
+    _thinkingTimer?.cancel();
+    _promptFinishedAt = DateTime.now();
+    _thinkingTimer = Timer(_kLongThinkingPause, () {
+      // Tới đây mà chưa có vad_speech_start nào cho lượt này -> một lần khựng.
+      if (!mounted || _hasSpokenThisTurn) return;
+      _longPauseCount++;
+    });
+  }
+
+  /// Học sinh đã cất tiếng (hoặc lượt kết thúc) -> thôi đo.
+  void _stopThinkingWatch() {
+    _thinkingTimer?.cancel();
+    _thinkingTimer = null;
+    _promptFinishedAt = null;
+  }
+
+  static List<String> _ideasFrom(Map<String, dynamic>? question) {
+    final raw = question?['suggestedIdeas'];
+    if (raw is! List) return const [];
+    return raw
+        .map((e) => e?.toString().trim() ?? '')
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  /// Học sinh bấm "Gợi ý".
+  ///
+  /// Đếm TRƯỚC khi kiểm có ý nào để hiện hay không: hành vi xin trợ giúp là thứ cần đo, còn
+  /// việc hệ thống có sẵn gợi ý hay không là chuyện của hệ thống.
+  void _requestHelp() {
+    _helpRequestCount++;
+    final ideas = _currentIdeas;
+    final elapsed = _promptFinishedAt == null
+        ? null
+        : DateTime.now().difference(_promptFinishedAt!);
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Gợi ý cho câu này',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 12),
+              if (ideas.isEmpty)
+                const Text(
+                  'Câu này chưa có gợi ý sẵn. Cứ nói những gì em nghĩ ra trước đã — '
+                  'nói sai vẫn tốt hơn im lặng, và phần chấm sẽ chỉ ra chỗ cần sửa.',
+                  style: TextStyle(fontSize: 13.5, height: 1.45),
+                )
+              else
+                for (final idea in ideas) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('•  ', style: TextStyle(fontSize: 14)),
+                      Expanded(
+                        child: Text(
+                          idea,
+                          style: const TextStyle(fontSize: 13.5, height: 1.45),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              if (elapsed != null && elapsed > _kLongThinkingPause) ...[
+                const SizedBox(height: 6),
+                const Text(
+                  'Câu này hơi khó với em phải không? Buổi sau em chọn mức dễ hơn cũng được.',
+                  style: TextStyle(fontSize: 12.5, color: AppColors.muted),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _speakAi(String text, {String? rate}) async {
@@ -212,6 +342,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       await _initTts();
       final started = await _repository.startSession(
         widget.topic,
+        targetFrameworkBandId: widget.targetFrameworkBandId,
         // Chỉ chạy khi kho chưa có câu phù hợp và AI phải sinh mới -- đổi nhãn để học
         // sinh biết đang chờ cái gì thay vì nhìn spinner trống vài chục giây.
         onPreparing: () {
@@ -228,6 +359,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         _budgetSeconds = started.budgetSeconds;
         _spokenSeconds = 0;
         _liveSpokenSeconds = 0;
+        _currentIdeas = _ideasFrom(started.firstQuestion);
       });
       _eventsSub = _realtimeClient.events.listen(_handleRealtimeEvent);
       _currentQuestionId = started.firstQuestion['questionId']?.toString();
@@ -353,6 +485,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         _currentQuestionId = question?['questionId']?.toString();
         setState(() {
           _pendingPromptText = question?['questionText'] as String?;
+          _currentIdeas = _ideasFrom(question);
         });
       case 'resume_ack':
         _handleResumeAck(event);
@@ -387,6 +520,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
 
   void _handleSpeechStart() {
     _turnTimer?.cancel();
+    _stopThinkingWatch();
     _speakingNow = true;
     _hasSpokenThisTurn = true;
     _speechStartedAt ??= DateTime.now();
@@ -478,6 +612,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
         _speakingNow = false;
         _speechStartedAt = null;
         _speechEndedAt = null;
+        _stopThinkingWatch();
         if (mounted) setState(() => _recorderState = _RecorderState.recording);
       }
     }
@@ -653,6 +788,7 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
     _speakingNow = false;
     _speechStartedAt = null;
     _speechEndedAt = null;
+    _stopThinkingWatch();
     if (!mounted) return;
     // Silence-timeout arms once the AI finishes speaking this prompt (see
     // _onAiSpeechDone), not immediately.
@@ -773,8 +909,11 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
       try {
         await _repository.endPracticeSession(
           sessionId: session.id,
-          helpRequestCount: 0,
-          longPauseCount: 0,
+          // Số đếm THẬT. Trước đây hai con số này gửi cứng 0, khiến
+          // SessionDiagnosisPolicy thoái hoá thành ngưỡng điểm thuần: "chán" bị suy ra từ
+          // ĐIỂM CAO, còn hai vế hành vi trong luật thì không bao giờ đúng.
+          helpRequestCount: _helpRequestCount,
+          longPauseCount: _longPauseCount,
         );
       } catch (_) {
         // Ending the local session view must not get stuck on a network hiccup here --
@@ -1052,7 +1191,16 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
               ),
             ),
           ),
-          const SizedBox(width: 14),
+          // Nút xin gợi ý. Mỗi lần bấm là một tín hiệu "em bí" do chính học sinh phát ra --
+          // rõ hơn nhiều so với suy từ điểm số, và là nguồn của helpRequestCount gửi lên
+          // lúc đóng phiên (xem SessionDiagnosisPolicy phía Java).
+          IconButton(
+            onPressed: _sessionEnded ? null : _requestHelp,
+            icon: const Icon(Icons.lightbulb_outline),
+            color: AppColors.warnFg,
+            tooltip: 'Gợi ý',
+          ),
+          const SizedBox(width: 4),
           _MicButton(
             pulse: _pulse,
             recording: recording,

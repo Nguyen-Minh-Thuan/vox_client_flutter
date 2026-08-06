@@ -22,11 +22,9 @@
   "chooseLanguage": "Choose Language",
   "languageEnglish": "English",
   "languageVietnamese": "Vietnamese",
-
   "navHome": "Home",
   "navSchedule": "Schedule",
   "navProfile": "Profile",
-
   "greetingLateNight": "Late night session?",
   "greetingMorning": "Good morning",
   "greetingAfternoon": "Good afternoon",
@@ -38,26 +36,36 @@
   "homeNotCompleted": "Not completed",
   "homeSearchLessons": "Search lessons…",
   "homeResume": "Resume →",
-
   "notificationsTitle": "Notifications",
   "notificationsMarkAllRead": "Mark all read",
   "notificationsGroupNew": "New",
   "notificationsGroupEarlier": "Earlier",
-
   "scheduleTitle": "Your Schedules",
   "scheduleLoadError": "Could not load your schedule.\n{error}",
   "@scheduleLoadError": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "scheduleRetry": "Retry",
   "scheduleToday": "Today · {date}",
   "@scheduleToday": {
-    "placeholders": { "date": { "type": "String" } }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "scheduleNoSessionsToday": "No sessions today.",
   "scheduleTomorrow": "Tomorrow · {date}",
   "@scheduleTomorrow": {
-    "placeholders": { "date": { "type": "String" } }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "scheduleNoSessionsTomorrow": "No sessions tomorrow.",
   "scheduleKindCentralized": "Centralized",
@@ -67,12 +75,15 @@
   "scheduleLegendHasSession": "Has a scheduled session",
   "scheduleRoomLabel": "Room {room}",
   "@scheduleRoomLabel": {
-    "placeholders": { "room": { "type": "String" } }
+    "placeholders": {
+      "room": {
+        "type": "String"
+      }
+    }
   },
   "scheduleStatusOpen": "Open",
   "scheduleStatusUpcoming": "Upcoming",
   "scheduleStatusClosed": "Closed",
-
   "teacherExamClassTestsTab": "Class Tests",
   "teacherExamCentralizedTab": "Centralized",
   "teacherExamKindClassTest": "Class Test",
@@ -90,12 +101,15 @@
   "teacherExamActionStart": "Start",
   "teacherExamActionClose": "Close",
   "teacherExamActionPublishResults": "Publish Results",
-
   "classTestUpdateStatusError": "Could not update status.",
   "classTestDeleteTitle": "Delete class test?",
   "classTestDeleteBody": "This will remove \"{name}\" permanently.",
   "@classTestDeleteBody": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "classTestCancel": "Cancel",
   "classTestDelete": "Delete",
@@ -118,41 +132,41 @@
   "classTestQuestions": "Questions",
   "classTestQuestionsSelected": "{count} selected",
   "@classTestQuestionsSelected": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "classTestSaveButton": "Save",
   "classTestCreateButton": "Create Class Test",
-
   "centralizedExamBlueprint": "Blueprint",
   "centralizedExamMembers": "Members",
   "centralizedExamNoMembers": "No members assigned.",
-
   "questionPickerLoadError": "Could not load questions.",
   "questionPickerTitle": "Select Questions",
   "questionPickerDone": "Done ({count})",
   "@questionPickerDone": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "questionPickerSearchHint": "Search questions",
-
   "navPractice": "Practice",
-
   "pzPreparingQuestions": "Preparing questions for this topic…\nThis takes about 10-20 seconds the first time.",
   "pzRetry": "Retry",
   "pzLoadError": "Could not load personalized practice.",
   "pzSeeAll": "See all",
   "pzMinutes": "{count} min",
   "@pzMinutes": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-  "pzLevelBeginner": "Beginner",
-  "pzLevelIntermediate": "Intermediate",
-  "pzLevelAdvanced": "Advanced",
-  "pzLevelWithPrefix": "Level: {level}",
-  "@pzLevelWithPrefix": {
-    "placeholders": { "level": { "type": "String" } }
-  },
-
   "pzHomeSessionToday": "TODAY'S SESSION",
   "pzHomePersonalizedBadge": "PERSONALIZED",
   "pzHomeSessionMeta": "1-on-1 conversation · focus:",
@@ -163,9 +177,7 @@
   "pzHomeStatWeeklyGoal": "Sessions this week",
   "pzHomeNoTopicYet": "No suggestions yet — pick a topic to get started",
   "pzHomeWeeklyFocus": "This week's focus",
-  "pzHomeViewProfile": "View profile",
   "pzHomeSuggestions": "Suggested for you",
-
   "pzPreparingTopics": "Finding topics that fit you…",
   "pzPreparingHint": "The first time takes a little longer while we write new ones.",
   "pzTopicsPreparing": "We are putting your profile together",
@@ -183,30 +195,52 @@
   "pzTopicsPriority": "PRIORITY #1",
   "pzTopicsMatch": "{percent}% match",
   "@pzTopicsMatch": {
-    "placeholders": { "percent": { "type": "int" } }
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "pzTopicsSpeakThis": "Speak this topic",
   "pzTopicsOtherSuggestions": "Other suggestions",
   "pzTopicsEmpty": "No topics in this list yet.",
   "pzTopicsFooterTip": "This list updates after every session — based on the topics you get excited about and the mistakes that keep coming back.",
   "pzTopicsWhy": "Why?",
-
   "pzSessionSpoken": "Spoken · {spoken} / {budget}",
   "@pzSessionSpoken": {
     "description": "Practice session header: seconds the student actually spoke vs the session speaking budget. Not a wall clock -- AI speech and thinking time are not counted.",
-    "placeholders": { "spoken": { "type": "String" }, "budget": { "type": "String" } }
+    "placeholders": {
+      "spoken": {
+        "type": "String"
+      },
+      "budget": {
+        "type": "String"
+      }
+    }
   },
   "pzSessionLive": "Speaking · {time}",
   "@pzSessionLive": {
-    "placeholders": { "time": { "type": "String" } }
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   },
   "pzSessionCorrectNow": "FIX NOW · {count} POINTS",
   "@pzSessionCorrectNow": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "pzSessionKnownWeakness": "Known weak spot · time #{count}",
   "@pzSessionKnownWeakness": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "pzSessionHearCorrect": "Hear it right",
   "pzSessionContinue": "Continue",
@@ -225,18 +259,25 @@
   "pzSessionTurnSaveFailed": "Your last turn couldn't be saved. Please try again.",
   "pzSessionEndedQuotaExceeded": "You've used up your practice quota. The session has ended.",
   "pzSessionReconnectFailed": "Connection lost and couldn't be restored. The session has ended.",
-
   "pzSummaryTitle": "Session summary",
   "pzSummaryHeader": "{topic} · {minutes} MIN",
   "@pzSummaryHeader": {
     "placeholders": {
-      "topic": { "type": "String" },
-      "minutes": { "type": "int" }
+      "topic": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "pzSummaryDelta": "{delta} vs last session",
   "@pzSummaryDelta": {
-    "placeholders": { "delta": { "type": "String" } }
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
   },
   "pzSummaryRubric": "Rubric · 5 criteria",
   "pzSummaryRubricLegend": "weight · score /10",
@@ -245,70 +286,35 @@
   "pzSummaryWorstPhoneme": "/{phoneme}/ · {percent}%",
   "@pzSummaryWorstPhoneme": {
     "description": "Weakest phoneme in a mispronounced word -- the exact spot that went wrong.",
-    "placeholders": { "phoneme": { "type": "String" }, "percent": { "type": "String" } }
+    "placeholders": {
+      "phoneme": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
   },
   "pzSummaryRepeatedErrors": "Repeated mistakes this session",
   "pzSummaryDrill": "Drill these {count} mistakes · {minutes} min",
   "@pzSummaryDrill": {
     "placeholders": {
-      "count": { "type": "int" },
-      "minutes": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "pzSummaryReplay": "Replay my recording",
-
   "pzLearningProfile": "Learning profile",
   "pzLearningProfileHint": "Average score and recent sessions",
-  "pzWeaknessTitle": "Weak-spot profile",
-  "pzWeaknessRange": "30 days",
-  "pzWeaknessFromSessions": "Compiled from {count} sessions",
-  "@pzWeaknessFromSessions": {
-    "placeholders": { "count": { "type": "int" } }
-  },
-  "pzWeaknessTracked": "Tracked",
-  "pzWeaknessNearlyFixed": "Nearly fixed",
-  "pzWeaknessNewlyFound": "Newly found",
-  "pzWeaknessGrammar": "Grammar",
-  "pzWeaknessPronunciation": "Pronunciation",
-  "pzWeaknessExpression": "Expression",
   "pzWeaknessSevere": "HIGH PRIORITY",
   "pzWeaknessMedium": "MEDIUM",
   "pzWeaknessMild": "NOT YET",
   "pzHistoryTitle": "Practice history",
   "pzHistoryEmpty": "No practice sessions yet",
-  "pzWeaknessObservations": "{count} observations",
-  "@pzWeaknessObservations": {
-    "placeholders": { "count": { "type": "int" } }
-  },
-  "pzWeaknessOccurrences": "{count} occurrences",
-  "@pzWeaknessOccurrences": {
-    "placeholders": { "count": { "type": "int" } }
-  },
-  "pzWeaknessBuildSession": "Build a session from the top 3",
-
-  "pzInterestsTitle": "Your interests",
-  "pzInterestsDiscovered": "I NOTICED SOMETHING",
-  "pzInterestsConfidence": "{percent}% confident",
-  "@pzInterestsConfidence": {
-    "placeholders": { "percent": { "type": "int" } }
-  },
-  "pzInterestsAdd": "Add to interests",
-  "pzInterestsDismiss": "Not now",
-  "pzInterestsActive": "Active",
-  "pzInterestsEdit": "Edit",
-  "pzInterestsCooling": "Cooling down",
-  "pzInterestsKeep": "Keep it",
-  "pzInterestsAutoUpdate": "Update automatically",
-  "pzInterestsAutoUpdateBody": "Let me change the suggested topics based on what you actually talk about.",
-  "pzInterestsFooter": "Every change shows up here before it affects your practice.",
-
-  "pzProgressTitle": "Progress",
-  "pzProgressRangeFourWeeks": "4 weeks",
-  "pzProgressRangeThreeMonths": "3 months",
-  "pzProgressRangeAll": "All time",
-  "pzProgressAverage": "Average score",
-  "pzProgressRecentSessions": "Recent sessions",
-
   "pzOnboardingIntroTitle": "Let's build your speaking profile",
   "pzOnboardingIntroBody": "Answer a few quick questions so every practice session is picked for you — your level, your interests, your weak spots.",
   "pzOnboardingIntroStart": "Get started",
@@ -317,8 +323,12 @@
   "pzOnboardingProgress": "{current}/{total}",
   "@pzOnboardingProgress": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "pzOnboardingQuizTip": "There are no right answers — answer honestly so the plan fits you.",
@@ -331,7 +341,11 @@
   "pzOnboardingMainGoal": "Main goal",
   "pzOnboardingContinueWithCount": "Continue · {count} topics picked",
   "@pzOnboardingContinueWithCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "pzOnboardingPickThree": "Pick at least 3 topics",
   "pzOnboardingProfileHeader": "YOUR LEARNING PROFILE",

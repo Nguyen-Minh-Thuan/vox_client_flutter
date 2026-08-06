@@ -22,11 +22,9 @@
   "chooseLanguage": "Chọn ngôn ngữ",
   "languageEnglish": "Tiếng Anh",
   "languageVietnamese": "Tiếng Việt",
-
   "navHome": "Trang chủ",
   "navSchedule": "Lịch",
   "navProfile": "Hồ sơ",
-
   "greetingLateNight": "Luyện tập khuya nhỉ?",
   "greetingMorning": "Buổi sáng tốt lành",
   "greetingAfternoon": "Chào buổi chiều",
@@ -38,26 +36,36 @@
   "homeNotCompleted": "Chưa hoàn thành",
   "homeSearchLessons": "Tìm bài học…",
   "homeResume": "Tiếp tục →",
-
   "notificationsTitle": "Thông báo",
   "notificationsMarkAllRead": "Đánh dấu đã đọc tất cả",
   "notificationsGroupNew": "Mới",
   "notificationsGroupEarlier": "Trước đó",
-
   "scheduleTitle": "Lịch của bạn",
   "scheduleLoadError": "Không thể tải lịch của bạn.\n{error}",
   "@scheduleLoadError": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "scheduleRetry": "Thử lại",
   "scheduleToday": "Hôm nay · {date}",
   "@scheduleToday": {
-    "placeholders": { "date": { "type": "String" } }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "scheduleNoSessionsToday": "Không có buổi nào hôm nay.",
   "scheduleTomorrow": "Ngày mai · {date}",
   "@scheduleTomorrow": {
-    "placeholders": { "date": { "type": "String" } }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "scheduleNoSessionsTomorrow": "Không có buổi nào ngày mai.",
   "scheduleKindCentralized": "Kiểm tra tập trung",
@@ -67,12 +75,15 @@
   "scheduleLegendHasSession": "Có buổi kiểm tra",
   "scheduleRoomLabel": "Phòng {room}",
   "@scheduleRoomLabel": {
-    "placeholders": { "room": { "type": "String" } }
+    "placeholders": {
+      "room": {
+        "type": "String"
+      }
+    }
   },
   "scheduleStatusOpen": "Đang diễn ra",
   "scheduleStatusUpcoming": "Sắp tới",
   "scheduleStatusClosed": "Đã kết thúc",
-
   "teacherExamClassTestsTab": "Kiểm tra trên lớp",
   "teacherExamCentralizedTab": "Tập trung",
   "teacherExamKindClassTest": "Kiểm tra trên lớp",
@@ -90,12 +101,15 @@
   "teacherExamActionStart": "Bắt đầu",
   "teacherExamActionClose": "Đóng",
   "teacherExamActionPublishResults": "Công bố kết quả",
-
   "classTestUpdateStatusError": "Không thể cập nhật trạng thái.",
   "classTestDeleteTitle": "Xóa bài kiểm tra?",
   "classTestDeleteBody": "Thao tác này sẽ xóa vĩnh viễn \"{name}\".",
   "@classTestDeleteBody": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "classTestCancel": "Hủy",
   "classTestDelete": "Xóa",
@@ -118,41 +132,41 @@
   "classTestQuestions": "Câu hỏi",
   "classTestQuestionsSelected": "Đã chọn {count}",
   "@classTestQuestionsSelected": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "classTestSaveButton": "Lưu",
   "classTestCreateButton": "Tạo bài kiểm tra",
-
   "centralizedExamBlueprint": "Đề thi mẫu",
   "centralizedExamMembers": "Thành viên",
   "centralizedExamNoMembers": "Chưa có thành viên nào.",
-
   "questionPickerLoadError": "Không thể tải câu hỏi.",
   "questionPickerTitle": "Chọn câu hỏi",
   "questionPickerDone": "Xong ({count})",
   "@questionPickerDone": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "questionPickerSearchHint": "Tìm kiếm câu hỏi",
-
   "navPractice": "Luyện nói",
-
   "pzPreparingQuestions": "Đang chuẩn bị câu hỏi riêng cho chủ đề này…\nMất khoảng 10-20 giây cho lần đầu.",
   "pzRetry": "Thử lại",
   "pzLoadError": "Không thể tải phần ôn luyện cá nhân hoá.",
   "pzSeeAll": "Tất cả",
   "pzMinutes": "{count} phút",
   "@pzMinutes": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-  "pzLevelBeginner": "Cơ bản",
-  "pzLevelIntermediate": "Trung cấp",
-  "pzLevelAdvanced": "Nâng cao",
-  "pzLevelWithPrefix": "Mức độ: {level}",
-  "@pzLevelWithPrefix": {
-    "placeholders": { "level": { "type": "String" } }
-  },
-
   "pzHomeSessionToday": "PHIÊN HÔM NAY",
   "pzHomePersonalizedBadge": "CÁ NHÂN HOÁ",
   "pzHomeSessionMeta": "Hội thoại 1-1 · trọng tâm:",
@@ -163,9 +177,7 @@
   "pzHomeStatWeeklyGoal": "Buổi tuần này",
   "pzHomeNoTopicYet": "Chưa có gợi ý nào — chọn 1 chủ đề để bắt đầu nhé",
   "pzHomeWeeklyFocus": "Tập trung tuần này",
-  "pzHomeViewProfile": "Xem hồ sơ",
   "pzHomeSuggestions": "Gợi ý cho bạn",
-
   "pzPreparingTopics": "Đang tìm chủ đề hợp với bạn…",
   "pzPreparingHint": "Lần đầu có thể lâu hơn chút vì đang soạn mới.",
   "pzTopicsPreparing": "Hệ thống đang tổng hợp thông tin của bạn",
@@ -183,30 +195,52 @@
   "pzTopicsPriority": "ƯU TIÊN #1",
   "pzTopicsMatch": "Khớp {percent}%",
   "@pzTopicsMatch": {
-    "placeholders": { "percent": { "type": "int" } }
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "pzTopicsSpeakThis": "Nói chủ đề này",
   "pzTopicsOtherSuggestions": "Gợi ý khác",
   "pzTopicsEmpty": "Chưa có chủ đề nào trong danh sách này.",
   "pzTopicsFooterTip": "Danh sách này tự đổi sau mỗi buổi nói — dựa trên chủ đề bạn hào hứng và lỗi lặp lại.",
   "pzTopicsWhy": "Vì sao?",
-
   "pzSessionSpoken": "Đã nói · {spoken} / {budget}",
   "@pzSessionSpoken": {
     "description": "Header phiên luyện: số giây học sinh THẬT SỰ nói so với ngân sách nói của phiên. Không phải đồng hồ đếm -- lúc AI nói hay học sinh nghĩ đều không tính.",
-    "placeholders": { "spoken": { "type": "String" }, "budget": { "type": "String" } }
+    "placeholders": {
+      "spoken": {
+        "type": "String"
+      },
+      "budget": {
+        "type": "String"
+      }
+    }
   },
   "pzSessionLive": "Đang nói · {time}",
   "@pzSessionLive": {
-    "placeholders": { "time": { "type": "String" } }
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   },
   "pzSessionCorrectNow": "SỬA NGAY · {count} ĐIỂM",
   "@pzSessionCorrectNow": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "pzSessionKnownWeakness": "Điểm yếu đã biết · lần thứ {count}",
   "@pzSessionKnownWeakness": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "pzSessionHearCorrect": "Nghe câu đúng",
   "pzSessionContinue": "Tiếp tục",
@@ -225,18 +259,25 @@
   "pzSessionTurnSaveFailed": "Không lưu được lượt trả lời vừa rồi. Vui lòng thử lại.",
   "pzSessionEndedQuotaExceeded": "Bạn đã dùng hết hạn mức luyện tập. Buổi luyện đã kết thúc.",
   "pzSessionReconnectFailed": "Mất kết nối và không thể kết nối lại. Buổi luyện đã kết thúc.",
-
   "pzSummaryTitle": "Tổng kết buổi nói",
   "pzSummaryHeader": "{topic} · {minutes} PHÚT",
   "@pzSummaryHeader": {
     "placeholders": {
-      "topic": { "type": "String" },
-      "minutes": { "type": "int" }
+      "topic": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "pzSummaryDelta": "{delta} so với buổi trước",
   "@pzSummaryDelta": {
-    "placeholders": { "delta": { "type": "String" } }
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
   },
   "pzSummaryRubric": "Rubric · 5 tiêu chí",
   "pzSummaryRubricLegend": "trọng số · điểm /10",
@@ -245,70 +286,35 @@
   "pzSummaryWorstPhoneme": "Âm /{phoneme}/ · {percent}%",
   "@pzSummaryWorstPhoneme": {
     "description": "Âm vị yếu nhất trong một từ phát âm chưa đạt -- chính là chỗ sai.",
-    "placeholders": { "phoneme": { "type": "String" }, "percent": { "type": "String" } }
+    "placeholders": {
+      "phoneme": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
   },
   "pzSummaryRepeatedErrors": "Lỗi lặp lại trong buổi",
   "pzSummaryDrill": "Luyện lại {count} lỗi này · {minutes} phút",
   "@pzSummaryDrill": {
     "placeholders": {
-      "count": { "type": "int" },
-      "minutes": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "pzSummaryReplay": "Nghe lại ghi âm",
-
   "pzLearningProfile": "Hồ sơ học tập",
   "pzLearningProfileHint": "Điểm trung bình và các buổi gần đây",
-  "pzWeaknessTitle": "Hồ sơ điểm yếu",
-  "pzWeaknessRange": "30 ngày",
-  "pzWeaknessFromSessions": "Tổng hợp từ {count} buổi nói",
-  "@pzWeaknessFromSessions": {
-    "placeholders": { "count": { "type": "int" } }
-  },
-  "pzWeaknessTracked": "Điểm yếu đang theo",
-  "pzWeaknessNearlyFixed": "Sắp khắc phục",
-  "pzWeaknessNewlyFound": "Mới phát hiện",
-  "pzWeaknessGrammar": "Ngữ pháp",
-  "pzWeaknessPronunciation": "Phát âm",
-  "pzWeaknessExpression": "Diễn đạt",
   "pzWeaknessSevere": "ƯU TIÊN CAO",
   "pzWeaknessMedium": "ƯU TIÊN VỪA",
   "pzWeaknessMild": "CHƯA CẦN",
   "pzHistoryTitle": "Lịch sử luyện tập",
   "pzHistoryEmpty": "Chưa có phiên luyện tập nào",
-  "pzWeaknessObservations": "{count} lần quan sát",
-  "@pzWeaknessObservations": {
-    "placeholders": { "count": { "type": "int" } }
-  },
-  "pzWeaknessOccurrences": "{count} lần lặp lại",
-  "@pzWeaknessOccurrences": {
-    "placeholders": { "count": { "type": "int" } }
-  },
-  "pzWeaknessBuildSession": "Tạo buổi luyện từ 3 điểm yếu đầu",
-
-  "pzInterestsTitle": "Sở thích của bạn",
-  "pzInterestsDiscovered": "MÌNH PHÁT HIỆN THÊM",
-  "pzInterestsConfidence": "độ chắc {percent}%",
-  "@pzInterestsConfidence": {
-    "placeholders": { "percent": { "type": "int" } }
-  },
-  "pzInterestsAdd": "Thêm vào sở thích",
-  "pzInterestsDismiss": "Bỏ qua",
-  "pzInterestsActive": "Đang hoạt động",
-  "pzInterestsEdit": "Sửa",
-  "pzInterestsCooling": "Đang nguội dần",
-  "pzInterestsKeep": "Giữ lại",
-  "pzInterestsAutoUpdate": "Tự cập nhật theo hành vi",
-  "pzInterestsAutoUpdateBody": "Cho phép mình đổi chủ đề gợi ý dựa trên điều bạn hay nói.",
-  "pzInterestsFooter": "Mọi thay đổi đều hiển thị ở đây trước khi ảnh hưởng tới bài luyện.",
-
-  "pzProgressTitle": "Tiến độ",
-  "pzProgressRangeFourWeeks": "4 tuần",
-  "pzProgressRangeThreeMonths": "3 tháng",
-  "pzProgressRangeAll": "Tất cả",
-  "pzProgressAverage": "Điểm trung bình",
-  "pzProgressRecentSessions": "Buổi gần đây",
-
   "pzOnboardingIntroTitle": "Cùng dựng hồ sơ nói của bạn",
   "pzOnboardingIntroBody": "Trả lời vài câu hỏi nhanh để mỗi buổi luyện đều được chọn riêng cho bạn — đúng trình độ, đúng sở thích, đúng điểm yếu.",
   "pzOnboardingIntroStart": "Bắt đầu",
@@ -317,8 +323,12 @@
   "pzOnboardingProgress": "{current}/{total}",
   "@pzOnboardingProgress": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "pzOnboardingQuizTip": "Không có đáp án đúng — trả lời thật để lộ trình bám đúng bạn.",
@@ -331,7 +341,11 @@
   "pzOnboardingMainGoal": "Mục tiêu chính",
   "pzOnboardingContinueWithCount": "Tiếp tục · đã chọn {count} chủ đề",
   "@pzOnboardingContinueWithCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "pzOnboardingPickThree": "Chọn ít nhất 3 chủ đề",
   "pzOnboardingProfileHeader": "HỒ SƠ HỌC TẬP CỦA BẠN",

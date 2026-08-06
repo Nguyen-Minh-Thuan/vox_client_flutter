@@ -8,11 +8,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../result/presentation/results_list_screen.dart';
 import '../../appeal/presentation/appeals_screen.dart';
 import '../../personalize/data/personalize_repository.dart';
-import '../../personalize/presentation/interests_screen.dart';
 import '../../personalize/presentation/onboarding/onboarding_flow.dart';
 import '../../personalize/presentation/practice_history_screen.dart';
-import '../../personalize/presentation/progress_screen.dart';
-import '../../personalize/presentation/weakness_profile_screen.dart';
 import '../../practice/presentation/recordings_screen.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/graphql_client.dart';
@@ -247,30 +244,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SectionLabel(l10n.navPractice),
                 const SizedBox(height: 10),
                 _MenuGroup(items: [
-                  _MenuItem(
-                    icon: Icons.show_chart,
-                    label: l10n.pzProgressTitle,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const ProgressScreen()),
-                    ),
-                  ),
-                  _MenuItem(
-                    icon: Icons.troubleshoot,
-                    label: l10n.pzWeaknessTitle,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const WeaknessProfileScreen()),
-                    ),
-                  ),
-                  _MenuItem(
-                    icon: Icons.favorite_outline,
-                    label: l10n.pzInterestsTitle,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const InterestsScreen()),
-                    ),
-                  ),
                   _MenuItem(
                     icon: Icons.history,
                     label: l10n.pzHistoryTitle,

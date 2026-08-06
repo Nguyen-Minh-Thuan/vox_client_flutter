@@ -764,30 +764,6 @@ abstract class AppLocalizations {
   /// **'{count} min'**
   String pzMinutes(int count);
 
-  /// No description provided for @pzLevelBeginner.
-  ///
-  /// In en, this message translates to:
-  /// **'Beginner'**
-  String get pzLevelBeginner;
-
-  /// No description provided for @pzLevelIntermediate.
-  ///
-  /// In en, this message translates to:
-  /// **'Intermediate'**
-  String get pzLevelIntermediate;
-
-  /// No description provided for @pzLevelAdvanced.
-  ///
-  /// In en, this message translates to:
-  /// **'Advanced'**
-  String get pzLevelAdvanced;
-
-  /// No description provided for @pzLevelWithPrefix.
-  ///
-  /// In en, this message translates to:
-  /// **'Level: {level}'**
-  String pzLevelWithPrefix(String level);
-
   /// No description provided for @pzHomeSessionToday.
   ///
   /// In en, this message translates to:
@@ -847,12 +823,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This week\'s focus'**
   String get pzHomeWeeklyFocus;
-
-  /// No description provided for @pzHomeViewProfile.
-  ///
-  /// In en, this message translates to:
-  /// **'View profile'**
-  String get pzHomeViewProfile;
 
   /// No description provided for @pzHomeSuggestions.
   ///
@@ -1190,60 +1160,6 @@ abstract class AppLocalizations {
   /// **'Average score and recent sessions'**
   String get pzLearningProfileHint;
 
-  /// No description provided for @pzWeaknessTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Weak-spot profile'**
-  String get pzWeaknessTitle;
-
-  /// No description provided for @pzWeaknessRange.
-  ///
-  /// In en, this message translates to:
-  /// **'30 days'**
-  String get pzWeaknessRange;
-
-  /// No description provided for @pzWeaknessFromSessions.
-  ///
-  /// In en, this message translates to:
-  /// **'Compiled from {count} sessions'**
-  String pzWeaknessFromSessions(int count);
-
-  /// No description provided for @pzWeaknessTracked.
-  ///
-  /// In en, this message translates to:
-  /// **'Tracked'**
-  String get pzWeaknessTracked;
-
-  /// No description provided for @pzWeaknessNearlyFixed.
-  ///
-  /// In en, this message translates to:
-  /// **'Nearly fixed'**
-  String get pzWeaknessNearlyFixed;
-
-  /// No description provided for @pzWeaknessNewlyFound.
-  ///
-  /// In en, this message translates to:
-  /// **'Newly found'**
-  String get pzWeaknessNewlyFound;
-
-  /// No description provided for @pzWeaknessGrammar.
-  ///
-  /// In en, this message translates to:
-  /// **'Grammar'**
-  String get pzWeaknessGrammar;
-
-  /// No description provided for @pzWeaknessPronunciation.
-  ///
-  /// In en, this message translates to:
-  /// **'Pronunciation'**
-  String get pzWeaknessPronunciation;
-
-  /// No description provided for @pzWeaknessExpression.
-  ///
-  /// In en, this message translates to:
-  /// **'Expression'**
-  String get pzWeaknessExpression;
-
   /// No description provided for @pzWeaknessSevere.
   ///
   /// In en, this message translates to:
@@ -1273,132 +1189,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No practice sessions yet'**
   String get pzHistoryEmpty;
-
-  /// No description provided for @pzWeaknessObservations.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} observations'**
-  String pzWeaknessObservations(int count);
-
-  /// No description provided for @pzWeaknessOccurrences.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} occurrences'**
-  String pzWeaknessOccurrences(int count);
-
-  /// No description provided for @pzWeaknessBuildSession.
-  ///
-  /// In en, this message translates to:
-  /// **'Build a session from the top 3'**
-  String get pzWeaknessBuildSession;
-
-  /// No description provided for @pzInterestsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Your interests'**
-  String get pzInterestsTitle;
-
-  /// No description provided for @pzInterestsDiscovered.
-  ///
-  /// In en, this message translates to:
-  /// **'I NOTICED SOMETHING'**
-  String get pzInterestsDiscovered;
-
-  /// No description provided for @pzInterestsConfidence.
-  ///
-  /// In en, this message translates to:
-  /// **'{percent}% confident'**
-  String pzInterestsConfidence(int percent);
-
-  /// No description provided for @pzInterestsAdd.
-  ///
-  /// In en, this message translates to:
-  /// **'Add to interests'**
-  String get pzInterestsAdd;
-
-  /// No description provided for @pzInterestsDismiss.
-  ///
-  /// In en, this message translates to:
-  /// **'Not now'**
-  String get pzInterestsDismiss;
-
-  /// No description provided for @pzInterestsActive.
-  ///
-  /// In en, this message translates to:
-  /// **'Active'**
-  String get pzInterestsActive;
-
-  /// No description provided for @pzInterestsEdit.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit'**
-  String get pzInterestsEdit;
-
-  /// No description provided for @pzInterestsCooling.
-  ///
-  /// In en, this message translates to:
-  /// **'Cooling down'**
-  String get pzInterestsCooling;
-
-  /// No description provided for @pzInterestsKeep.
-  ///
-  /// In en, this message translates to:
-  /// **'Keep it'**
-  String get pzInterestsKeep;
-
-  /// No description provided for @pzInterestsAutoUpdate.
-  ///
-  /// In en, this message translates to:
-  /// **'Update automatically'**
-  String get pzInterestsAutoUpdate;
-
-  /// No description provided for @pzInterestsAutoUpdateBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Let me change the suggested topics based on what you actually talk about.'**
-  String get pzInterestsAutoUpdateBody;
-
-  /// No description provided for @pzInterestsFooter.
-  ///
-  /// In en, this message translates to:
-  /// **'Every change shows up here before it affects your practice.'**
-  String get pzInterestsFooter;
-
-  /// No description provided for @pzProgressTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Progress'**
-  String get pzProgressTitle;
-
-  /// No description provided for @pzProgressRangeFourWeeks.
-  ///
-  /// In en, this message translates to:
-  /// **'4 weeks'**
-  String get pzProgressRangeFourWeeks;
-
-  /// No description provided for @pzProgressRangeThreeMonths.
-  ///
-  /// In en, this message translates to:
-  /// **'3 months'**
-  String get pzProgressRangeThreeMonths;
-
-  /// No description provided for @pzProgressRangeAll.
-  ///
-  /// In en, this message translates to:
-  /// **'All time'**
-  String get pzProgressRangeAll;
-
-  /// No description provided for @pzProgressAverage.
-  ///
-  /// In en, this message translates to:
-  /// **'Average score'**
-  String get pzProgressAverage;
-
-  /// No description provided for @pzProgressRecentSessions.
-  ///
-  /// In en, this message translates to:
-  /// **'Recent sessions'**
-  String get pzProgressRecentSessions;
 
   /// No description provided for @pzOnboardingIntroTitle.
   ///
