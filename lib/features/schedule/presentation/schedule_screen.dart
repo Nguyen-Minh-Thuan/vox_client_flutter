@@ -51,15 +51,6 @@ class _ScheduleEntry {
     this.roomLabel,
   });
 
-  factory _ScheduleEntry.fromExamSchedule(ExamSchedule e) => _ScheduleEntry(
-        name: e.name,
-        description: e.description,
-        kind: e.kind,
-        status: e.status,
-        startAt: e.openAt,
-        endAt: e.closeAt,
-      );
-
   factory _ScheduleEntry.fromTeacherItem(TeacherScheduleItem item) =>
       _ScheduleEntry(
         name: item.exam.name,
@@ -134,13 +125,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         );
         entries.addAll(items.map(_ScheduleEntry.fromTeacherItem));
       } else {
-        final schedulesFuture = _repository.getStudentSchedule();
-        final examsFuture = _repository.getExams();
-        final schedules = await schedulesFuture;
-        final exams = await examsFuture;
-        final examsById = {for (final exam in exams) exam.id: exam};
+        final schedules = await _repository.getStudentSchedule();
         for (final schedule in schedules) {
-          final exam = examsById[schedule.examId];
+          final exam = schedule.exam;
           if (exam != null) {
             entries.add(_ScheduleEntry.fromStudentItem(schedule, exam));
           }
@@ -184,9 +171,29 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final tomorrow = _today.add(const Duration(days: 1));
-    final todaySessions = _examsOn(_today);
-    final tomorrowSessions = _examsOn(tomorrow);
     final selectedDate = _weekStart.add(Duration(days: _selectedDay));
+
+    // Bám theo NGÀY ĐANG CHỌN, không phải hôm nay.
+    //
+    // Bản trước luôn dựng hai mục "Hôm nay"/"Ngày mai" cố định, còn `_selectedDay` chỉ đổi ô
+    // được tô đậm trên thanh ngày. Nên bấm lùi về thứ Hai vẫn thấy đúng lịch thứ Năm -- thanh
+    // ngày trông như bấm được nhưng thực ra không dẫn đi đâu cả.
+    final selectedSessions = _examsOn(selectedDate);
+    final isToday = _isSameDate(selectedDate, _today);
+    final isTomorrow = _isSameDate(selectedDate, tomorrow);
+    final sectionTitle = isToday
+        ? l10n.scheduleToday(_monthDayLabel(context, selectedDate))
+        : isTomorrow
+            ? l10n.scheduleTomorrow(_monthDayLabel(context, selectedDate))
+            : l10n.scheduleOnDate(
+                _weekdayShortLabel(context, selectedDate),
+                _monthDayLabel(context, selectedDate),
+              );
+    final emptyText = isToday
+        ? l10n.scheduleNoSessionsToday
+        : isTomorrow
+            ? l10n.scheduleNoSessionsTomorrow
+            : l10n.scheduleNoSessionsOnDate;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -263,31 +270,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   : ListView(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                       children: [
-                        SectionLabel(l10n.scheduleToday(_monthDayLabel(context, _today))),
+                        SectionLabel(sectionTitle),
                         const SizedBox(height: 16),
-                        if (todaySessions.isEmpty)
-                          Text(l10n.scheduleNoSessionsToday,
+                        if (selectedSessions.isEmpty)
+                          Text(emptyText,
                               style: const TextStyle(color: AppColors.textFaint))
                         else
-                          for (final e in todaySessions) ...[
-                            _SessionCard(
-                              exam: e,
-                              highlighted: _isSameDate(_today, selectedDate),
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                        const SizedBox(height: 8),
-                        SectionLabel(l10n.scheduleTomorrow(_monthDayLabel(context, tomorrow))),
-                        const SizedBox(height: 16),
-                        if (tomorrowSessions.isEmpty)
-                          Text(l10n.scheduleNoSessionsTomorrow,
-                              style: const TextStyle(color: AppColors.textFaint))
-                        else
-                          for (final e in tomorrowSessions) ...[
-                            _SessionCard(
-                              exam: e,
-                              highlighted: _isSameDate(tomorrow, selectedDate),
-                            ),
+                          for (final e in selectedSessions) ...[
+                            // Tô đậm chỉ khi đang xem hôm nay: nó nghĩa là "buổi này đang tới
+                            // gần", không phải "đây là ngày bạn vừa bấm" -- ngày nào bấm cũng
+                            // tô thì màu đó hết mang tin gì.
+                            _SessionCard(exam: e, highlighted: isToday),
                             const SizedBox(height: 12),
                           ],
                       ],
@@ -303,10 +296,18 @@ String _kindLabel(BuildContext context, ExamKind kind) {
   return kind == ExamKind.centralized ? l10n.scheduleKindCentralized : l10n.scheduleKindClassTest;
 }
 
-_SessionStatus _statusFor(ExamLifecycleStatus status) {
-  switch (status) {
-    case ExamLifecycleStatus.inProgress:
-      return _SessionStatus.open;
+/// Trạng thái của MỘT CA THI, không phải của cả kỳ thi.
+///
+/// Trước 2026-08-06 hàm này chỉ đọc `ExamLifecycleStatus`, tức trạng thái của **cả kỳ thi**.
+/// Một kỳ thi `IN_PROGRESS` có thể trải nhiều ngày và nhiều ca; ca sáng đã đóng từ lâu vẫn
+/// hiện "Đang diễn ra" vì kỳ thi nói chung vẫn đang diễn ra. Sai ở chỗ trộn hai cấp: thẻ này
+/// nói về ca thi, còn cột nó đọc lại nói về kỳ thi.
+///
+/// Nay giờ của ca là căn cứ chính; trạng thái kỳ thi chỉ được phép **thu hẹp**:
+/// kỳ đã đóng/huỷ/công bố thì mọi ca đều đóng, kỳ chưa mở thì mọi ca đều là sắp tới —
+/// đồng hồ không cứu được một kỳ thi chưa publish.
+_SessionStatus _statusFor(_ScheduleEntry entry) {
+  switch (entry.status) {
     case ExamLifecycleStatus.closed:
     case ExamLifecycleStatus.resultsPublished:
     case ExamLifecycleStatus.cancelled:
@@ -314,7 +315,19 @@ _SessionStatus _statusFor(ExamLifecycleStatus status) {
     case ExamLifecycleStatus.scheduled:
     case ExamLifecycleStatus.draft:
       return _SessionStatus.upcoming;
+    case ExamLifecycleStatus.inProgress:
+      break;
   }
+
+  final now = DateTime.now();
+  final start = entry.startAt;
+  final end = entry.endAt;
+  // Ca chưa xếp giờ (startDate/endDate nullable ở schema): không có gì để so, giữ nguyên
+  // kết luận theo kỳ thi thay vì đoán.
+  if (start == null && end == null) return _SessionStatus.open;
+  if (start != null && now.isBefore(start)) return _SessionStatus.upcoming;
+  if (end != null && now.isAfter(end)) return _SessionStatus.closed;
+  return _SessionStatus.open;
 }
 
 String _timeLabel(BuildContext context, DateTime? d) {
@@ -728,7 +741,7 @@ class _SessionCard extends StatelessWidget {
 
   TagChip _statusChip(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    switch (_statusFor(exam.status)) {
+    switch (_statusFor(exam)) {
       case _SessionStatus.open:
         return TagChip(
           l10n.scheduleStatusOpen,
@@ -754,7 +767,7 @@ class _SessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dimmed = _statusFor(exam.status) == _SessionStatus.closed;
+    final dimmed = _statusFor(exam) == _SessionStatus.closed;
     return Opacity(
       opacity: dimmed ? 0.55 : 1,
       child: Container(

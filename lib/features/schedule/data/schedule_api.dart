@@ -1,29 +1,10 @@
 import '../../../core/network/graphql_client.dart';
-import '../../../core/network/api_client.dart';
 import 'models/exam_room_schedule.dart';
-import 'models/exam_schedule.dart';
 
 class ScheduleApi {
-  ScheduleApi(this._client, [ApiClient? apiClient])
-      : _apiClient = apiClient ?? ApiClient();
+  ScheduleApi(this._client);
 
   final GraphQLClient _client;
-  final ApiClient _apiClient;
-
-  Future<List<ExamSchedule>> getExams({int page = 0, int size = 100}) async {
-    final response = await _apiClient.get(
-      '/v1/exams',
-      queryParameters: {'page': page, 'size': size},
-    );
-    final envelope = response.data as Map<String, dynamic>;
-    final payload = envelope['data'];
-    final content = payload is List
-        ? payload
-        : (payload as Map<String, dynamic>)['content'] as List;
-    return content
-        .map((e) => ExamSchedule.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
 
   Future<List<ExamRoomSchedule>> getExamSchedules(String? examId) async {
     final data = await _client.query('''
@@ -42,13 +23,21 @@ class ScheduleApi {
         .toList();
   }
 
+  /// Ca thi của chính học sinh đang đăng nhập, KÈM thông tin bài thi trên từng ca.
+  ///
+  /// Lấy `exam { ... }` ngay tại đây chứ không gọi thêm danh sách bài thi rồi tự ghép:
+  /// backend thêm field này đúng để tránh việc đó (xem ExamScheduleController#exam), và
+  /// cách ghép cũ vừa hỏng vừa âm thầm -- xem chú thích ở ScheduleRepository.
+  ///
+  /// Không hỏi `proctors`: học sinh không hiển thị giám thị, mà mỗi field thừa là thêm
+  /// một resolver có thể ném và kéo đổ cả query.
   Future<List<ExamRoomSchedule>> getMyExamSchedules() async {
     final data = await _client.query('''
       query MyExamSchedules {
         myExamSchedules {
           id examId startDate endDate
           room { name code }
-          proctors { teacher { id } }
+          exam { id name description kind status openAt closeAt }
         }
       }
     ''');

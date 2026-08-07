@@ -4,7 +4,6 @@ import '../../../app/theme.dart';
 import '../../../app/widgets.dart';
 import '../../../l10n/app_localizations.dart';
 import '../data/models/practice_topic.dart';
-import '../data/models/topic_suggestion.dart';
 import '../data/personalize_repository.dart';
 import 'personalize_styles.dart';
 import 'personalize_widgets.dart';
@@ -46,56 +45,15 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
   /// Chủ đề đã bị từ chối ở các lô trước, không chào lại nữa trong phiên duyệt này.
   final _rejectedTopicIds = <String>{};
 
-  /// Gợi ý AI rút ra từ LỜI học sinh nói trong các buổi gần đây, chờ nhận/bỏ.
-  ///
-  /// Đây là nơi tiêu thụ duy nhất của `myPendingTopicSuggestions`. Backend sinh gợi ý sau mỗi
-  /// phiên nhưng chặn khi đã có 2 gợi ý PENDING -- không có màn nào nhận/bỏ thì hai dòng đó
-  /// nằm mãi và cổng chặn khoá luôn việc sinh tiếp. Nói cách khác: thiếu widget này thì cả
-  /// tính năng tự khoá chính nó sau đúng hai lượt.
-  List<TopicSuggestion> _suggestions = const [];
-
-  /// Gợi ý đang chờ backend trả lời -- khoá nút để không bấm hai lần.
-  String? _respondingSuggestionId;
+  // GỠ 2026-08-06: thẻ "gợi ý chờ duyệt" (_suggestions / _respondToSuggestion / _loadSuggestions).
+  // Nguồn duy nhất tạo ra gợi ý là đường suy chủ đề TỪ LỜI HỌC SINH NÓI, đã bỏ ở backend, nên
+  // thẻ này vĩnh viễn không có gì để hiện. Tìm chủ đề theo từ khoá (_openKeywordSheet bên dưới)
+  // là đường KHÁC và vẫn chạy -- đừng nhầm hai cái.
 
   @override
   void initState() {
     super.initState();
     _load();
-    _loadSuggestions();
-  }
-
-  Future<void> _loadSuggestions() async {
-    try {
-      final suggestions = await _repository.getPendingTopicSuggestions();
-      if (!mounted) return;
-      setState(() => _suggestions = suggestions);
-    } catch (_) {
-      // Gợi ý là phần thêm, không phải nội dung chính của màn này: hỏng thì im lặng bỏ qua
-      // chứ không đẩy màn chọn chủ đề vào trạng thái lỗi.
-    }
-  }
-
-  Future<void> _respondToSuggestion(TopicSuggestion suggestion, bool accept) async {
-    if (_respondingSuggestionId != null) return;
-    setState(() => _respondingSuggestionId = suggestion.id);
-    try {
-      await _repository.respondToTopicSuggestion(suggestion.id, accept);
-      if (!mounted) return;
-      setState(() {
-        _suggestions = [
-          for (final item in _suggestions)
-            if (item.id != suggestion.id) item,
-        ];
-        _respondingSuggestionId = null;
-      });
-      if (accept) {
-        // Nhận thì backend vừa tạo một practice_topic thật -- tải lại danh sách để nó hiện
-        // ra ngay, thay vì bắt học sinh tự đoán là đã thêm được.
-        await _load();
-      }
-    } catch (_) {
-      if (mounted) setState(() => _respondingSuggestionId = null);
-    }
   }
 
   @override
@@ -150,6 +108,32 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
       _round = _round + 1;
     });
     await _load();
+  }
+
+  /// "Không thích chủ đề này" — loại đúng MỘT thẻ.
+  ///
+  /// Khác `_refreshOffers` ở chỗ nó DẠY hệ thống chứ không chỉ giấu thẻ: backend ghi tín hiệu
+  /// sở thích âm 0,15 (bằng mức "bỏ dở vì chán") rồi tính lại điểm quan tâm, nên chủ đề tụt
+  /// hạng ở mọi lần mở sau chứ không quay lại như cũ.
+  ///
+  /// Vẫn thêm vào `_rejectedTopicIds`: tín hiệu âm hạ điểm chứ không cấm tuyệt đối, mà học
+  /// sinh vừa bấm loại thì không muốn thấy nó lại ngay trong lô kế tiếp.
+  Future<void> _dismissTopic(PracticeTopic topic) async {
+    setState(() {
+      _rejectedTopicIds.add(topic.id);
+      _topics = [for (final item in _topics) if (item.id != topic.id) item];
+    });
+    try {
+      await _repository.dismissTopicOffer(topic.id);
+    } catch (_) {
+      // Thẻ đã biến mất trước mắt học sinh rồi -- kéo nó về chỗ cũ vì một lỗi mạng thì rối
+      // hơn là im lặng. Lần mở sau nó xuất hiện lại, đúng như khi chưa kịp ghi nhận.
+    }
+    // Lô còn 3 thẻ thì xin bù cho đủ, nhưng KHÔNG tăng _round: đây là loại một thẻ, không
+    // phải "đổi cả lô", nên chưa cần nâng tỉ lệ thăm dò.
+    if (mounted && _topics.length < 4 && _searchController.text.trim().isEmpty) {
+      await _load();
+    }
   }
 
   /// Nhờ AI soạn chủ đề cho từ khoá học sinh vừa gõ.
@@ -303,16 +287,32 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
               icon: const Icon(Icons.refresh),
               tooltip: 'Đổi gợi ý khác',
             ),
-          IconButton(
-            onPressed: _pickingRandom ? null : _pickRandom,
-            icon: _pickingRandom
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.shuffle),
-            tooltip: l10n.pzTopicsRandom,
+          // Nút này có CHỮ chứ không chỉ icon: ⤨ một mình không nói được nó sẽ bốc đại một
+          // chủ đề rồi VÀO PHIÊN NGAY. Người dùng tưởng là "xáo lại danh sách" -- một thao
+          // tác vô hại -- rồi bị đẩy thẳng vào buổi luyện.
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: TextButton.icon(
+              onPressed: _pickingRandom ? null : _pickRandom,
+              icon: _pickingRandom
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.shuffle, size: 18),
+              label: Text(l10n.pzTopicsRandom),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.indigo,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -339,18 +339,6 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
                     onGenerate: _generateFromKeyword,
                   ),
                 ],
-                // Chỉ hiện khi KHÔNG đang tìm kiếm: lúc tìm thì học sinh đang có ý định cụ
-                // thể, chen gợi ý vào giữa là làm nhiễu.
-                if (_searchController.text.trim().isEmpty)
-                  for (final suggestion in _suggestions) ...[
-                    const SizedBox(height: 10),
-                    _TopicSuggestionCard(
-                      suggestion: suggestion,
-                      busy: _respondingSuggestionId == suggestion.id,
-                      onRespond: (accept) =>
-                          _respondToSuggestion(suggestion, accept),
-                    ),
-                  ],
                 const SizedBox(height: 12),
                 _FilterPills(selected: _filter, onSelect: _selectFilter),
               ],
@@ -453,6 +441,7 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
           topic: priority,
           onSpeak: () => _pick(priority),
           onToggleSaved: () => _toggleSaved(priority),
+          onDismiss: () => _dismissTopic(priority),
         ),
         if (rest.isNotEmpty) ...[
           const SizedBox(height: 16),
@@ -463,6 +452,7 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
               topic: topic,
               onTap: () => _pick(topic),
               onToggleSaved: () => _toggleSaved(topic),
+              onDismiss: () => _dismissTopic(topic),
             ),
             const SizedBox(height: 8),
           ],
@@ -479,121 +469,6 @@ class _PracticeTopicsScreenState extends State<PracticeTopicsScreen> {
 /// Chỉ hiện khi backend trả `canGenerate = true`, tức kho không có gì khớp NHƯNG từ khoá
 /// vẫn hợp lệ để soạn mới. Trước đây tìm không ra chỉ ra một danh sách rỗng — học sinh
 /// không có đường nào đi tiếp, dù backend đã sẵn sàng soạn.
-/// Thẻ "AI nghe thấy em hay nhắc tới ..." — nhận hoặc bỏ.
-///
-/// Khác `_GenerateTopicCard` ở chỗ nguồn gốc: cái kia là học sinh CHỦ ĐỘNG gõ từ khoá, còn
-/// cái này do hệ thống đọc lại `transcript` các buổi gần đây mà rút ra. Vì học sinh không hề
-/// yêu cầu, phải hỏi trước khi thêm vào kho chủ đề của em -- và phải nói rõ VÌ SAO đề xuất,
-/// nếu không nó giống hệ thống tự tiện đoán.
-class _TopicSuggestionCard extends StatelessWidget {
-  const _TopicSuggestionCard({
-    required this.suggestion,
-    required this.busy,
-    required this.onRespond,
-  });
-
-  final TopicSuggestion suggestion;
-  final bool busy;
-  final void Function(bool accept) onRespond;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 12, 10),
-      decoration: BoxDecoration(
-        color: AppColors.chipBlueBg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.hearing, size: 20, color: AppColors.indigo),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Gợi ý từ những buổi vừa rồi',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.indigo,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      suggestion.name,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                    if (suggestion.reasonText.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        suggestion.reasonText,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          color: AppColors.muted,
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (busy)
-                const Padding(
-                  padding: EdgeInsets.only(right: 10),
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              TextButton(
-                onPressed: busy ? null : () => onRespond(false),
-                child: const Text(
-                  'Bỏ qua',
-                  style: TextStyle(fontSize: 13, color: AppColors.muted),
-                ),
-              ),
-              const SizedBox(width: 4),
-              FilledButton(
-                onPressed: busy ? null : () => onRespond(true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.indigo,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'Thêm chủ đề',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _GenerateTopicCard extends StatelessWidget {
   const _GenerateTopicCard({
     required this.keyword,
@@ -732,10 +607,11 @@ class _FilterPills extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // Chỉ còn hai rổ. "Theo mục tiêu" và "Điểm yếu" đã bỏ cùng hồ sơ điểm yếu -- xếp hạng
+    // chủ đề giờ dựa hoàn toàn vào sở thích, kho câu còn lại và mức khớp chương trình, nên
+    // ba pill sẽ trả về cùng một danh sách và học sinh bấm qua lại không thấy gì đổi.
     final labels = <TopicFilter, String>{
       TopicFilter.forYou: l10n.pzTopicsFilterForYou,
-      TopicFilter.byGoal: l10n.pzTopicsFilterByGoal,
-      TopicFilter.byWeakness: l10n.pzTopicsFilterByWeakness,
       TopicFilter.saved: l10n.pzTopicsFilterSaved,
     };
 
@@ -763,11 +639,13 @@ class _PriorityCard extends StatelessWidget {
     required this.topic,
     required this.onSpeak,
     required this.onToggleSaved,
+    required this.onDismiss,
   });
 
   final PracticeTopic topic;
   final VoidCallback onSpeak;
   final VoidCallback onToggleSaved;
+  final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -820,6 +698,7 @@ class _PriorityCard extends StatelessWidget {
                 saved: topic.buckets.contains(TopicFilter.saved),
                 onTap: onToggleSaved,
               ),
+              _DismissButton(onTap: onDismiss),
             ],
           ),
           const SizedBox(height: 8),
@@ -843,15 +722,6 @@ class _PriorityCard extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final tag in topic.focusTags)
-                _WhiteChip(tag, color: AppColors.chipOrangeFg),
-            ],
-          ),
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
@@ -879,6 +749,33 @@ class _PriorityCard extends StatelessWidget {
 }
 
 /// Bookmark toggle shared by `_PriorityCard` and `_TopicRow`.
+/// "Không thích chủ đề này" — loại thẻ khỏi lô đang chào.
+///
+/// Khác nút "Đổi gợi ý" trên thanh tiêu đề: cái kia đổi CẢ LÔ và chỉ nhớ trong màn hình này,
+/// còn nút này gửi tín hiệu âm 0,15 xuống backend nên chủ đề tụt hạng ở mọi lần mở sau.
+class _DismissButton extends StatelessWidget {
+  const _DismissButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(99),
+      child: const Padding(
+        padding: EdgeInsets.all(4),
+        child: Icon(
+          Icons.close,
+          size: 20,
+          color: Color(0xFF999999),
+          semanticLabel: 'Không thích chủ đề này',
+        ),
+      ),
+    );
+  }
+}
+
 class _SaveButton extends StatelessWidget {
   const _SaveButton({required this.saved, required this.onTap});
 
@@ -904,42 +801,18 @@ class _SaveButton extends StatelessWidget {
   }
 }
 
-class _WhiteChip extends StatelessWidget {
-  const _WhiteChip(this.label, {this.color = AppColors.indigo});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
 class _TopicRow extends StatelessWidget {
   const _TopicRow({
     required this.topic,
     required this.onTap,
     required this.onToggleSaved,
+    required this.onDismiss,
   });
 
   final PracticeTopic topic;
   final VoidCallback onTap;
   final VoidCallback onToggleSaved;
+  final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -986,10 +859,10 @@ class _TopicRow extends StatelessWidget {
                         saved: topic.buckets.contains(TopicFilter.saved),
                         onTap: onToggleSaved,
                       ),
+                      _DismissButton(onTap: onDismiss),
                     ],
                   ),
-                  if (topic.reasons.isNotEmpty ||
-                      topic.focusTags.isNotEmpty) ...[
+                  if (topic.reasons.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 6,
@@ -997,7 +870,6 @@ class _TopicRow extends StatelessWidget {
                       children: [
                         for (final reason in topic.reasons)
                           TagChip.blue(reason),
-                        for (final tag in topic.focusTags) TagChip(tag),
                       ],
                     ),
                   ],

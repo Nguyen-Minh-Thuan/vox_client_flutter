@@ -1,12 +1,10 @@
 import 'practice_topic.dart';
-import 'weakness.dart';
 
 /// Everything the "Luyện nói" home tab renders in one shot.
 ///
 /// No single GraphQL query returns this shape -- it's assembled in
 /// `PersonalizeRepository.getDashboard()` from `myPracticeDashboardStats`,
-/// `practiceTopicOffers`, `myWeaknessProfile` and the profile query, each a
-/// real call.
+/// `practiceTopicOffers` and the profile query, each a real call.
 class PracticeDashboard {
   final String learnerName;
   final int streakDays;
@@ -21,9 +19,6 @@ class PracticeDashboard {
   /// No "/N" target shown -- the backend has no concept of a weekly goal.
   final int sessionsThisWeek;
 
-  /// "TẬP TRUNG TUẦN NÀY" rows -- top weakest real criteria.
-  final List<CriterionWeaknessRow> weeklyFocus;
-
   /// "GỢI Ý CHO BẠN" cards.
   final List<PracticeTopic> suggestions;
 
@@ -34,7 +29,6 @@ class PracticeDashboard {
     required this.sessionsDone,
     required this.averageScore,
     required this.sessionsThisWeek,
-    this.weeklyFocus = const [],
     this.suggestions = const [],
   });
 }

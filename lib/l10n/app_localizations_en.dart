@@ -156,6 +156,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scheduleNoSessionsTomorrow => 'No sessions tomorrow.';
 
   @override
+  String scheduleOnDate(String weekday, String date) {
+    return '$weekday · $date';
+  }
+
+  @override
+  String get scheduleNoSessionsOnDate => 'No sessions on this day.';
+
+  @override
   String get scheduleKindCentralized => 'Centralized';
 
   @override
@@ -366,7 +374,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pzHomePersonalizedBadge => 'PERSONALIZED';
 
   @override
-  String get pzHomeSessionMeta => '1-on-1 conversation · focus:';
+  String get pzHomeSessionMeta => '1-on-1 conversation with AI';
 
   @override
   String get pzHomeStartSpeaking => 'Start speaking';
@@ -386,9 +394,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pzHomeNoTopicYet =>
       'No suggestions yet — pick a topic to get started';
-
-  @override
-  String get pzHomeWeeklyFocus => 'This week\'s focus';
 
   @override
   String get pzHomeSuggestions => 'Suggested for you';
@@ -420,16 +425,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pzTopicsFilterForYou => 'For you';
 
   @override
-  String get pzTopicsFilterByGoal => 'By goal';
-
-  @override
-  String get pzTopicsFilterByWeakness => 'Weak spots';
-
-  @override
   String get pzTopicsFilterSaved => 'Saved';
 
   @override
-  String get pzTopicsRandom => 'Pick a random topic';
+  String get pzTopicsRandom => 'Random topic';
 
   @override
   String get pzTopicsSave => 'Save topic';
@@ -456,7 +455,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pzTopicsFooterTip =>
-      'This list updates after every session — based on the topics you get excited about and the mistakes that keep coming back.';
+      'This list updates after every session — based on the topics you get excited about and your recent scores.';
 
   @override
   String get pzTopicsWhy => 'Why?';
@@ -585,15 +584,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pzLearningProfileHint => 'Average score and recent sessions';
-
-  @override
-  String get pzWeaknessSevere => 'HIGH PRIORITY';
-
-  @override
-  String get pzWeaknessMedium => 'MEDIUM';
-
-  @override
-  String get pzWeaknessMild => 'NOT YET';
 
   @override
   String get pzHistoryTitle => 'Practice history';

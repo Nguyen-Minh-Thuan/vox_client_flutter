@@ -141,7 +141,11 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen> {
         ],
         _ScoreHero(summary: summary),
         const SizedBox(height: 12),
-        _SessionRubricCard(rubric: summary.rubric),
+        _SessionRubricCard(
+          rubric: summary.rubric,
+          scaleMin: summary.scoreScaleMin,
+          scaleMax: summary.scoreScaleMax,
+        ),
         const SizedBox(height: 12),
         _RepeatedErrorsCard(errors: summary.repeatedErrors),
         const SizedBox(height: 12),
@@ -292,7 +296,10 @@ class _ScoreHero extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  ' / 100',
+                  // Mẫu số theo thang của CHÍNH phiên, không viết cứng: phiên từ V13 là 0-100,
+                  // phiên cũ theo rubric (0-10, hoặc 5-10). Trước 2026-08-07 in cứng " / 100"
+                  // nên điểm 7,8 trên thang 10 hiện thành "7.8 / 100".
+                  ' / ${summary.scoreScaleMax.toStringAsFixed(0)}',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w600,
@@ -661,9 +668,26 @@ class _CorrectionDetail extends StatelessWidget {
 }
 
 class _SessionRubricCard extends StatelessWidget {
-  const _SessionRubricCard({required this.rubric});
+  const _SessionRubricCard({
+    required this.rubric,
+    required this.scaleMin,
+    required this.scaleMax,
+  });
 
   final List<SessionRubricCriterion> rubric;
+
+  /// Dải điểm THẬT của phiên này -- xem [SessionSummary.scoreScaleMin].
+  final double scaleMin;
+  final double scaleMax;
+
+  /// Vị trí của một điểm trên dải, về 0..1.
+  ///
+  /// Dải hỏng (max <= min, dữ liệu cấu hình sai) thì trả 0 chứ không chia cho 0: thanh trống
+  /// là sai, nhưng NaN làm vỡ cả layout.
+  static double _ratioOnScale(double score, double min, double max) {
+    if (max <= min) return 0;
+    return ((score - min) / (max - min)).clamp(0, 1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -698,7 +722,9 @@ class _SessionRubricCard extends StatelessWidget {
               ),
               child: MeterRow(
                 label: rubric[i].label,
-                ratio: (rubric[i].score / 100).clamp(0, 1),
+                // Chuẩn hoá theo dải THẬT của phiên. Chia cứng cho 100 trong khi dữ liệu là
+                // 0-10 làm mọi thanh chỉ đầy ~8% -- nhìn như học sinh làm bài rất tệ.
+                ratio: _ratioOnScale(rubric[i].score, scaleMin, scaleMax),
                 value: rubric[i].score.round().toString(),
               ),
             ),

@@ -1,5 +1,8 @@
 /// Buckets behind the filter pills on the topics screen.
-enum TopicFilter { forYou, byGoal, byWeakness, saved }
+///
+/// `byGoal`/`byWeakness` đã bỏ cùng hồ sơ điểm yếu: backend chỉ còn một công thức xếp hạng
+/// nên ba rổ sẽ trả về cùng một danh sách.
+enum TopicFilter { forYou, saved }
 
 /// A speaking topic the app can propose for a practice session.
 class PracticeTopic {
@@ -16,9 +19,6 @@ class PracticeTopic {
   /// Short "Vì bạn thích bóng đá" style chips.
   final List<String> reasons;
 
-  /// Skill the topic drills, e.g. "Thì quá khứ" — rendered as an amber chip.
-  final List<String> focusTags;
-
   /// Material icon codepoint name resolved by the UI; kept as a plain string
   /// so the model stays free of Flutter imports.
   final String icon;
@@ -33,9 +33,13 @@ class PracticeTopic {
   /// | `KEYWORD` (tự gõ tìm) | 1.00 | 0.20 |
   /// | `SELECTED` (tự bấm thẻ) | 0.95 | 0.15 |
   /// | `EXPLORATION` (bấm "chọn giúp tôi") | 0.60 | 0.10 |
+  /// | `EPSILON` (hệ thống tráo vào lô chào) | 0.60 | 0.10 |
   ///
   /// Phải đi theo chủ đề chứ không gán cứng lúc vào phiên: hệ thống tự đưa chủ đề mà ghi
   /// 0.95 như học sinh tự chọn là **dương giả** -- đúng thứ thiết kế cảnh báo.
+  ///
+  /// `EPSILON` KHÔNG do client gửi. Học sinh tưởng mình tự bấm nên client gửi `SELECTED`;
+  /// backend tự suy ra bằng cách xếp hạng lại (`BuildPracticePaperUseCase.resolveOrigin`).
   final String origin;
 
   /// Cả lô thẻ đang hiện lúc học sinh bấm chọn chủ đề này, và các lô đã bị "Đổi gợi ý" trước
@@ -60,7 +64,6 @@ class PracticeTopic {
     required this.minutes,
     this.matchPercent,
     this.reasons = const [],
-    this.focusTags = const [],
     this.icon = 'chat_bubble_outline',
     this.buckets = const {TopicFilter.forYou},
     this.origin = 'SELECTED',
@@ -85,7 +88,6 @@ class PracticeTopic {
       minutes: minutes,
       matchPercent: matchPercent,
       reasons: reasons,
-      focusTags: focusTags,
       icon: icon,
       buckets: buckets ?? this.buckets,
       origin: origin ?? this.origin,
@@ -112,9 +114,6 @@ class PracticeTopic {
       reasons: (json['reasons'] as List<dynamic>? ?? const [])
           .map((e) => e as String)
           .toList(),
-      focusTags: (json['focusTags'] as List<dynamic>? ?? const [])
-          .map((e) => e as String)
-          .toList(),
       buckets: {bucket, if (savedByMe) TopicFilter.saved},
       origin: origin,
     );
@@ -130,9 +129,6 @@ class PracticeTopic {
       reasons: (json['reasons'] as List<dynamic>? ?? const [])
           .map((e) => e as String)
           .toList(),
-      focusTags: (json['focusTags'] as List<dynamic>? ?? const [])
-          .map((e) => e as String)
-          .toList(),
       icon: json['icon'] as String? ?? 'chat_bubble_outline',
       buckets: (json['buckets'] as List<dynamic>? ?? const [])
           .map((e) => _filterFromJson(e as String?))
@@ -141,16 +137,6 @@ class PracticeTopic {
   }
 
   static TopicFilter _filterFromJson(String? value) {
-    switch (value) {
-      case 'BY_GOAL':
-        return TopicFilter.byGoal;
-      case 'BY_WEAKNESS':
-        return TopicFilter.byWeakness;
-      case 'SAVED':
-        return TopicFilter.saved;
-      case 'FOR_YOU':
-      default:
-        return TopicFilter.forYou;
-    }
+    return value == 'SAVED' ? TopicFilter.saved : TopicFilter.forYou;
   }
 }

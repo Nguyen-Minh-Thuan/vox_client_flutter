@@ -491,6 +491,8 @@ class _TurnRow extends StatelessWidget {
   }
 }
 
+/// Điểm AI chấm theo từng tiêu chí. Điểm luôn thấy; NHẬN XÉT của AI nằm sau dropdown ở
+/// từng tiêu chí -- xem [_CriterionTile].
 class _CriterionBreakdown extends StatelessWidget {
   const _CriterionBreakdown({required this.evaluation});
   final ExamItemEvaluation? evaluation;
@@ -498,25 +500,135 @@ class _CriterionBreakdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (evaluation == null) {
-      return const Padding(padding: EdgeInsets.all(16), child: Text('Chưa có đánh giá chi tiết.', style: TextStyle(fontSize: 13, color: AppColors.muted)));
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('Chưa có đánh giá chi tiết.',
+            style: TextStyle(fontSize: 13, color: AppColors.muted)),
+      );
+    }
+    final data = evaluation!;
+    if (data.criteria.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('Câu này chưa có điểm theo tiêu chí.',
+            style: TextStyle(fontSize: 13, color: AppColors.muted)),
+      );
     }
     return Padding(
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Theo tiêu chí', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.dark)),
+          const Text('Theo tiêu chí',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.dark)),
           const SizedBox(height: 10),
-          for (final criterion in evaluation!.criteria) Container(
-            width: double.infinity,
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE2E8F0))),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [Expanded(child: Text(criterion.criterionName ?? criterion.criterionCode, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.dark))), Text('${criterion.finalScore?.toStringAsFixed(1) ?? '-'} / ${criterion.maxScore?.toStringAsFixed(1) ?? '-'}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.indigo))]),
-              if (criterion.rationale?.isNotEmpty == true) Padding(padding: const EdgeInsets.only(top: 6), child: Text(criterion.rationale!, style: const TextStyle(fontSize: 12.5, color: AppColors.muted))),
-            ]),
+          if (data.feedbackSummary?.isNotEmpty == true) ...[
+            Text(data.feedbackSummary!,
+                style: const TextStyle(fontSize: 12.5, height: 1.45, color: AppColors.dark)),
+            const SizedBox(height: 12),
+          ],
+          for (final criterion in data.criteria) _CriterionTile(criterion),
+        ],
+      ),
+    );
+  }
+}
+
+class _CriterionTile extends StatefulWidget {
+  const _CriterionTile(this.criterion);
+
+  final ExamItemCriterionScore criterion;
+
+  @override
+  State<_CriterionTile> createState() => _CriterionTileState();
+}
+
+class _CriterionTileState extends State<_CriterionTile> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final criterion = widget.criterion;
+    // Thang lấy từ rubric đang áp, KHÔNG cứng 0-10: đổi trường sang thang khác thì thanh vẫn
+    // đúng tỉ lệ. Thiếu min/max thì không vẽ thanh chứ không đoán.
+    final min = criterion.minScore;
+    final max = criterion.maxScore;
+    final score = criterion.finalScore;
+    final hasScale = min != null && max != null && max > min && score != null;
+    final ratio = hasScale ? ((score - min) / (max - min)).clamp(0.0, 1.0) : 0.0;
+    final hasRationale = criterion.rationale?.isNotEmpty == true;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Điểm luôn thấy, nhận xét nằm sau dropdown: nhận xét AI dài vài dòng mỗi tiêu chí,
+          // năm tiêu chí mở hết thì đẩy các lượt nói phía dưới ra khỏi màn hình.
+          InkWell(
+            onTap: hasRationale ? () => setState(() => _open = !_open) : null,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(criterion.criterionName ?? criterion.criterionCode,
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.dark)),
+                      ),
+                      Text(
+                        '${score?.toStringAsFixed(1) ?? '-'} / ${max?.toStringAsFixed(1) ?? '-'}',
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.indigo),
+                      ),
+                      if (hasRationale) ...[
+                        const SizedBox(width: 4),
+                        Icon(_open ? Icons.expand_less : Icons.expand_more,
+                            size: 18, color: AppColors.muted),
+                      ],
+                    ],
+                  ),
+                  if (hasScale) ...[
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(99),
+                      child: Container(
+                        height: 5,
+                        color: const Color(0xFFE2E8F0),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: ratio,
+                          child: Container(color: AppColors.indigo),
+                        ),
+                      ),
+                    ),
+                  ],
+                  // Nói rõ còn gì để xem, thay vì để mũi tên tự giải thích lấy.
+                  if (hasRationale && !_open) ...[
+                    const SizedBox(height: 6),
+                    const Text('Xem nhận xét của AI',
+                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.indigo)),
+                  ],
+                ],
+              ),
+            ),
           ),
+          if (hasRationale && _open)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Text(criterion.rationale!,
+                  style: const TextStyle(fontSize: 12.5, height: 1.45, color: AppColors.muted)),
+            ),
         ],
       ),
     );

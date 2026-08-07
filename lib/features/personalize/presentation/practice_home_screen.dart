@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../app/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../data/models/practice_band_option.dart';
 import '../data/models/practice_dashboard.dart';
 import '../data/models/practice_topic.dart';
-import '../data/models/weakness.dart';
 import '../data/personalize_repository.dart';
-import 'band_picker_sheet.dart';
 import 'personalize_styles.dart';
 import 'personalize_widgets.dart';
 import 'practice_session_screen.dart';
 import 'practice_topics_screen.dart';
+import 'topic_intro_screen.dart';
 
 /// Tab 2 — the personalized speaking home (design `1b`, screen 1).
 class PracticeHomeScreen extends StatefulWidget {
@@ -51,11 +51,19 @@ class _PracticeHomeScreenState extends State<PracticeHomeScreen> {
     }
   }
 
-  /// Hỏi độ khó TRƯỚC khi vào phiên. Bắt buộc phải chọn: hệ thống không còn suy ra bậc của
-  /// học sinh nữa, nên không có giá trị nào đúng thay cho em được. Đóng bảng chọn = huỷ vào
-  /// phiên, không lặng lẽ vào bằng một bậc mặc định.
+  /// Cửa DUY NHẤT vào phiên luyện: mọi lối chọn chủ đề (thẻ hôm nay, thẻ gợi ý, màn chọn
+  /// chủ đề, tìm từ khoá, chọn ngẫu nhiên) đều đi qua đây.
+  ///
+  /// Chèn một TRANG xác nhận thay cho bảng trượt cũ (`showBandPickerSheet`): bảng trượt bật
+  /// lên đè ngay lên màn cũ nên với chủ đề đến từ nút "Chọn ngẫu nhiên" hay từ màn chọn chủ
+  /// đề, học sinh không kịp thấy mình sắp luyện gì. Trang đặt tên chủ đề, lý do được chào và
+  /// độ khó cạnh nhau.
+  ///
+  /// Quay lại từ trang đó = huỷ vào phiên, không lặng lẽ vào bằng một bậc mặc định.
   Future<void> _openSession(PracticeTopic topic) async {
-    final band = await showBandPickerSheet(context);
+    final band = await Navigator.of(context).push<PracticeBandOption>(
+      MaterialPageRoute(builder: (_) => TopicIntroScreen(topic: topic)),
+    );
     if (band == null || !mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -110,16 +118,6 @@ class _PracticeHomeScreenState extends State<PracticeHomeScreen> {
                   const SizedBox(height: 12),
                   _StatRow(dashboard: data),
                   const SizedBox(height: 22),
-                  // Dải "tập trung tuần này" ở lại, nhưng không còn đường vào trang hồ sơ
-                  // điểm yếu (đã xoá). Đây là chỗ duy nhất còn nói cho học sinh biết VÌ SAO
-                  // hệ thống gợi ý những chủ đề này -- bỏ nốt thì cá nhân hoá thành hộp đen.
-                  _SectionHeader(label: l10n.pzHomeWeeklyFocus),
-                  const SizedBox(height: 10),
-                  for (final weakness in data.weeklyFocus) ...[
-                    _FocusRow(weakness: weakness),
-                    const SizedBox(height: 8),
-                  ],
-                  const SizedBox(height: 14),
                   _SectionHeader(
                     label: l10n.pzHomeSuggestions,
                     action: l10n.pzSeeAll,
@@ -326,22 +324,8 @@ class _TodaySessionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 5),
-          Text.rich(
-            TextSpan(
-              text: '${l10n.pzHomeSessionMeta} ',
-              children: [
-                for (int i = 0; i < topic.focusTags.length; i++) ...[
-                  if (i > 0) const TextSpan(text: ', '),
-                  TextSpan(
-                    text: topic.focusTags[i],
-                    style: const TextStyle(
-                      color: Color(0xFFFDBA74),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+          Text(
+            l10n.pzHomeSessionMeta,
             style: TextStyle(
               fontSize: 12,
               height: 1.5,
@@ -508,57 +492,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// One "TẬP TRUNG TUẦN NÀY" row.
-class _FocusRow extends StatelessWidget {
-  const _FocusRow({required this.weakness});
-  final CriterionWeaknessRow weakness;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = severityColors(weakness.severity);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: rowDecoration,
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: colors.bg,
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Icon(Icons.history_edu, size: 19, color: colors.fg),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  weakness.criterionName,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.ink,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                MeterBar(
-                  ratio: weakness.ratio,
-                  color: severityBarColor(weakness.severity),
-                  height: 5,
-                  track: AppColors.borderSoft,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SuggestionCard extends StatelessWidget {
   const _SuggestionCard({required this.topic, required this.onTap});
 
@@ -602,7 +535,6 @@ class _SuggestionCard extends StatelessWidget {
               runSpacing: 6,
               children: [
                 for (final reason in topic.reasons) TagChip.blue(reason),
-                for (final tag in topic.focusTags) TagChip.orange(tag),
               ],
             ),
           ],

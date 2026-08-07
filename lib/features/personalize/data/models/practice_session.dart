@@ -13,9 +13,6 @@ class PracticeSession {
   final String topicId;
   final String topicTitle;
 
-  /// Skill chips shown in the session header, e.g. "Thì quá khứ".
-  final List<String> focusTags;
-
   /// The scripted conversation. While the backend is missing, the screen
   /// reveals these one turn at a time as the learner records.
   final List<PracticeTurn> turns;
@@ -24,7 +21,6 @@ class PracticeSession {
     required this.id,
     required this.topicId,
     required this.topicTitle,
-    this.focusTags = const [],
     this.turns = const [],
   });
 
@@ -33,9 +29,6 @@ class PracticeSession {
       id: json['id'] as String,
       topicId: json['topicId'] as String,
       topicTitle: json['topicTitle'] as String,
-      focusTags: (json['focusTags'] as List<dynamic>? ?? const [])
-          .map((e) => e as String)
-          .toList(),
       turns: (json['turns'] as List<dynamic>? ?? const [])
           .map((e) => PracticeTurn.fromJson(e as Map<String, dynamic>))
           .toList(),

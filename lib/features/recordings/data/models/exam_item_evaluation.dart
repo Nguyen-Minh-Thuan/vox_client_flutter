@@ -72,12 +72,22 @@ class ExamItemEvaluationTurn {
 }
 
 class ExamItemEvaluation {
-  const ExamItemEvaluation({this.criteria = const [], this.turns = const []});
+  const ExamItemEvaluation({
+    this.criteria = const [],
+    this.turns = const [],
+    this.feedbackSummary,
+  });
   final List<ExamItemCriterionScore> criteria;
   final List<ExamItemEvaluationTurn> turns;
+
+  /// Nhận xét chung AI viết cho cả câu. Schema đã có từ lâu (`ExamItemEvaluationDetails
+  /// .feedbackSummary`) nhưng màn này chưa từng xin -- mà đây đúng là câu trả lời cho
+  /// "AI chấm câu này thế nào", chứ điểm từng tiêu chí chỉ nói được phần nào.
+  final String? feedbackSummary;
 
   factory ExamItemEvaluation.fromJson(Map<String, dynamic> json) => ExamItemEvaluation(
         criteria: (json['criteria'] as List? ?? const []).map((item) => ExamItemCriterionScore.fromJson(item as Map<String, dynamic>)).toList(),
         turns: (json['turns'] as List? ?? const []).map((item) => ExamItemEvaluationTurn.fromJson(item as Map<String, dynamic>)).toList(),
+        feedbackSummary: json['feedbackSummary'] as String?,
       );
 }

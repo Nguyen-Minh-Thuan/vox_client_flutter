@@ -18,7 +18,6 @@ class PersonalizeApi {
     minutes
     rationale
     reasons
-    focusTags
   ''';
 
   /// Maps to `practiceTopicOffers(excludeTopicIds, round, bucket)`.
@@ -414,6 +413,21 @@ class PersonalizeApi {
     );
   }
 
+  /// Maps to `dismissTopicOffer(topicId)` — học sinh bấm loại một thẻ chủ đề.
+  ///
+  /// Khác `excludeTopicIds`: cái đó chỉ giấu thẻ trong lượt duyệt hiện tại, còn cái này ghi
+  /// tín hiệu sở thích âm 0,15 (bằng mức "bỏ dở vì chán") nên có hiệu lực ở mọi lần mở sau.
+  Future<void> dismissTopicOffer(String topicId) async {
+    await _client.query(
+      '''
+      mutation DismissTopicOffer(\$topicId: ID!) {
+        dismissTopicOffer(topicId: \$topicId)
+      }
+    ''',
+      variables: {'topicId': topicId},
+    );
+  }
+
   /// Maps to `pickRandomTopic`.
   Future<Map<String, dynamic>> pickRandomTopic() async {
     final data = await _client.query('''
@@ -431,27 +445,6 @@ class PersonalizeApi {
   // question-generation mechanism ever consumed flsaScore — see
   // onboarding_flow.dart doc comment). The `submitFlsaSelfReport` mutation
   // still exists on the backend if this needs to be re-added later.
-
-  /// Maps to `myWeaknessProfile`.
-  Future<Map<String, dynamic>> getWeaknessProfile() async {
-    final data = await _client.query('''
-      query MyWeaknessProfile {
-        myWeaknessProfile {
-          sessionsAnalysed
-          criteria {
-            criterionCode
-            criterionName
-            weakness
-            observationCount
-            reliable
-          }
-        }
-      }
-    ''');
-
-    return data['myWeaknessProfile'] as Map<String, dynamic>;
-  }
-
 
   /// Maps to `myPracticeHistory(limit)`.
   Future<List<Map<String, dynamic>>> getPracticeHistory(int limit) async {
@@ -486,10 +479,12 @@ class PersonalizeApi {
           durationSeconds
           itemCount
           overallScore
+          scoreScaleMin
+          scoreScaleMax
           completed
           pendingEvaluationCount
           difficultyRank
-          criterionScores { criterionCode score matchedBandCode }
+          criterionScores { criterionCode score }
           turns {
             turnOrder transcript audioUrl wordFeedbackJson turnScore
             corrections { category originalText correctedText explanation correctAudioUrl }
@@ -502,41 +497,6 @@ class PersonalizeApi {
     return data['myPracticeSessionDetail'] as Map<String, dynamic>;
   }
 
-  /// Maps to `myPendingTopicSuggestions` — chủ đề AI rút ra từ lời học sinh nói trong bài,
-  /// đang chờ nhận/bỏ.
-  ///
-  /// Backend sinh sau MỖI phiên (`TopicSuggestionSessionListener`) nhưng chặn khi đã có 2 gợi
-  /// ý PENDING. Không có màn nào tiêu thụ thì 2 dòng đó nằm mãi và cổng chặn khoá luôn việc
-  /// sinh tiếp — nên query này phải có người gọi thì cả tính năng mới sống.
-  Future<List<Map<String, dynamic>>> getPendingTopicSuggestions() async {
-    final data = await _client.query('''
-      query MyPendingTopicSuggestions {
-        myPendingTopicSuggestions {
-          id
-          suggestedTopicName
-          interestDimension
-          confidence
-          reasonText
-        }
-      }
-    ''');
-
-    final suggestions = data['myPendingTopicSuggestions'] as List;
-    return suggestions.cast<Map<String, dynamic>>();
-  }
-
-  /// Maps to `respondToTopicSuggestion(suggestionId, accept)`.
-  Future<void> respondToTopicSuggestion(
-    String suggestionId,
-    bool accept,
-  ) async {
-    await _client.query(
-      '''
-      mutation RespondToTopicSuggestion(\$suggestionId: ID!, \$accept: Boolean!) {
-        respondToTopicSuggestion(suggestionId: \$suggestionId, accept: \$accept)
-      }
-    ''',
-      variables: {'suggestionId': suggestionId, 'accept': accept},
-    );
-  }
+  // GỠ 2026-08-06: myPendingTopicSuggestions / respondToTopicSuggestion. Hai thao tác GraphQL
+  // này đã bị xoá khỏi schema cùng đường suy chủ đề từ lời học sinh nói.
 }

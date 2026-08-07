@@ -45,4 +45,8 @@ class ResultRepository {
 
   Future<ExamCandidateResult> getSessionResult(String sessionId) =>
       _resultApi.getSessionResult(sessionId);
+
+  /// Chi tiết AI chấm một câu -- gọi khi học sinh xổ một mục ra xem.
+  Future<ExamItemEvaluation?> getItemEvaluation(String answerId) =>
+      _resultApi.getItemEvaluation(answerId);
 }

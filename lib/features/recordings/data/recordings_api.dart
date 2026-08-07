@@ -74,6 +74,7 @@ class RecordingsApi {
     final data = await _client.query('''
       query ExamItemResponseEvaluation(\$answerId: ID!) {
         examItemResponseEvaluation(answerId: \$answerId) {
+          feedbackSummary
           criteria { criterionCode criterionName finalScore minScore maxScore rationale }
           turns { id turnOrder wordFeedback }
         }

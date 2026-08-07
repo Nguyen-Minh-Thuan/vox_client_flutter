@@ -156,6 +156,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get scheduleNoSessionsTomorrow => 'Không có buổi nào ngày mai.';
 
   @override
+  String scheduleOnDate(String weekday, String date) {
+    return '$weekday · $date';
+  }
+
+  @override
+  String get scheduleNoSessionsOnDate => 'Không có buổi nào ngày này.';
+
+  @override
   String get scheduleKindCentralized => 'Kiểm tra tập trung';
 
   @override
@@ -366,7 +374,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get pzHomePersonalizedBadge => 'CÁ NHÂN HOÁ';
 
   @override
-  String get pzHomeSessionMeta => 'Hội thoại 1-1 · trọng tâm:';
+  String get pzHomeSessionMeta => 'Hội thoại 1-1 với AI';
 
   @override
   String get pzHomeStartSpeaking => 'Bắt đầu nói';
@@ -386,9 +394,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get pzHomeNoTopicYet =>
       'Chưa có gợi ý nào — chọn 1 chủ đề để bắt đầu nhé';
-
-  @override
-  String get pzHomeWeeklyFocus => 'Tập trung tuần này';
 
   @override
   String get pzHomeSuggestions => 'Gợi ý cho bạn';
@@ -417,12 +422,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pzTopicsFilterForYou => 'Cho bạn';
-
-  @override
-  String get pzTopicsFilterByGoal => 'Theo mục tiêu';
-
-  @override
-  String get pzTopicsFilterByWeakness => 'Điểm yếu';
 
   @override
   String get pzTopicsFilterSaved => 'Đã lưu';
@@ -455,7 +454,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pzTopicsFooterTip =>
-      'Danh sách này tự đổi sau mỗi buổi nói — dựa trên chủ đề bạn hào hứng và lỗi lặp lại.';
+      'Danh sách này tự đổi sau mỗi buổi nói — dựa trên chủ đề bạn hào hứng và điểm số gần đây.';
 
   @override
   String get pzTopicsWhy => 'Vì sao?';
@@ -583,15 +582,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pzLearningProfileHint => 'Điểm trung bình và các buổi gần đây';
-
-  @override
-  String get pzWeaknessSevere => 'ƯU TIÊN CAO';
-
-  @override
-  String get pzWeaknessMedium => 'ƯU TIÊN VỪA';
-
-  @override
-  String get pzWeaknessMild => 'CHƯA CẦN';
 
   @override
   String get pzHistoryTitle => 'Lịch sử luyện tập';

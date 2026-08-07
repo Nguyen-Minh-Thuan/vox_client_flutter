@@ -27,6 +27,15 @@ class SessionSummary {
   /// "6,5 ở bậc 3" và "6,5 ở bậc 4" là hai chuyện khác hẳn.
   final double? difficultyRank;
 
+  /// Thang chấm của CHÍNH phiên này. Từ V13 phiên luyện là 0-100; phiên cũ theo thang rubric
+  /// đã áp lúc đó (0-10, hoặc 5-10...).
+  ///
+  /// Phải đọc từ backend chứ không viết cứng: trước 2026-08-07 màn tổng kết in " / 100" và
+  /// chia thanh tỉ lệ cho 100, trong khi dữ liệu là 0-10 -- ra "7.8 / 100" và năm thanh gần
+  /// như trống. Hai loại phiên còn cùng tồn tại lâu dài nên không có mẫu số nào đúng cho cả hai.
+  final double scoreScaleMin;
+  final double scoreScaleMax;
+
   const SessionSummary({
     required this.sessionId,
     required this.topicTitle,
@@ -38,6 +47,8 @@ class SessionSummary {
     this.mispronounced = const [],
     this.drillMinutes = 4,
     this.pendingEvaluations = 0,
+    this.scoreScaleMin = 0,
+    this.scoreScaleMax = 100,
     this.difficultyRank,
   });
 

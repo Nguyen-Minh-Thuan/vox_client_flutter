@@ -380,6 +380,18 @@ abstract class AppLocalizations {
   /// **'No sessions tomorrow.'**
   String get scheduleNoSessionsTomorrow;
 
+  /// No description provided for @scheduleOnDate.
+  ///
+  /// In en, this message translates to:
+  /// **'{weekday} · {date}'**
+  String scheduleOnDate(String weekday, String date);
+
+  /// No description provided for @scheduleNoSessionsOnDate.
+  ///
+  /// In en, this message translates to:
+  /// **'No sessions on this day.'**
+  String get scheduleNoSessionsOnDate;
+
   /// No description provided for @scheduleKindCentralized.
   ///
   /// In en, this message translates to:
@@ -779,7 +791,7 @@ abstract class AppLocalizations {
   /// No description provided for @pzHomeSessionMeta.
   ///
   /// In en, this message translates to:
-  /// **'1-on-1 conversation · focus:'**
+  /// **'1-on-1 conversation with AI'**
   String get pzHomeSessionMeta;
 
   /// No description provided for @pzHomeStartSpeaking.
@@ -817,12 +829,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No suggestions yet — pick a topic to get started'**
   String get pzHomeNoTopicYet;
-
-  /// No description provided for @pzHomeWeeklyFocus.
-  ///
-  /// In en, this message translates to:
-  /// **'This week\'s focus'**
-  String get pzHomeWeeklyFocus;
 
   /// No description provided for @pzHomeSuggestions.
   ///
@@ -878,18 +884,6 @@ abstract class AppLocalizations {
   /// **'For you'**
   String get pzTopicsFilterForYou;
 
-  /// No description provided for @pzTopicsFilterByGoal.
-  ///
-  /// In en, this message translates to:
-  /// **'By goal'**
-  String get pzTopicsFilterByGoal;
-
-  /// No description provided for @pzTopicsFilterByWeakness.
-  ///
-  /// In en, this message translates to:
-  /// **'Weak spots'**
-  String get pzTopicsFilterByWeakness;
-
   /// No description provided for @pzTopicsFilterSaved.
   ///
   /// In en, this message translates to:
@@ -899,7 +893,7 @@ abstract class AppLocalizations {
   /// No description provided for @pzTopicsRandom.
   ///
   /// In en, this message translates to:
-  /// **'Pick a random topic'**
+  /// **'Random topic'**
   String get pzTopicsRandom;
 
   /// No description provided for @pzTopicsSave.
@@ -947,7 +941,7 @@ abstract class AppLocalizations {
   /// No description provided for @pzTopicsFooterTip.
   ///
   /// In en, this message translates to:
-  /// **'This list updates after every session — based on the topics you get excited about and the mistakes that keep coming back.'**
+  /// **'This list updates after every session — based on the topics you get excited about and your recent scores.'**
   String get pzTopicsFooterTip;
 
   /// No description provided for @pzTopicsWhy.
@@ -1159,24 +1153,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Average score and recent sessions'**
   String get pzLearningProfileHint;
-
-  /// No description provided for @pzWeaknessSevere.
-  ///
-  /// In en, this message translates to:
-  /// **'HIGH PRIORITY'**
-  String get pzWeaknessSevere;
-
-  /// No description provided for @pzWeaknessMedium.
-  ///
-  /// In en, this message translates to:
-  /// **'MEDIUM'**
-  String get pzWeaknessMedium;
-
-  /// No description provided for @pzWeaknessMild.
-  ///
-  /// In en, this message translates to:
-  /// **'NOT YET'**
-  String get pzWeaknessMild;
 
   /// No description provided for @pzHistoryTitle.
   ///

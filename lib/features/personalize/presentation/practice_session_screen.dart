@@ -59,7 +59,7 @@ class PracticeSessionScreen extends StatefulWidget {
 
   final PracticeTopic topic;
 
-  /// Bậc học sinh chọn ở ô độ khó ngay trước khi vào phiên -- xem `showBandPickerSheet`.
+  /// Bậc học sinh chọn ở trang xác nhận ngay trước khi vào phiên -- xem `TopicIntroScreen`.
   final String targetFrameworkBandId;
 
   @override
@@ -989,7 +989,6 @@ class _PracticeSessionScreenState extends State<PracticeSessionScreen>
                 title: widget.topic.title,
                 spokenSeconds: _spokenSeconds + _liveSpokenSeconds,
                 budgetSeconds: _budgetSeconds,
-                focusTags: _session?.focusTags ?? widget.topic.focusTags,
                 onClose: _handleExitRequest,
               ),
               Expanded(child: _buildBody(l10n)),
@@ -1219,7 +1218,6 @@ class _SessionHeader extends StatelessWidget {
     required this.title,
     required this.spokenSeconds,
     required this.budgetSeconds,
-    required this.focusTags,
     required this.onClose,
   });
 
@@ -1231,7 +1229,6 @@ class _SessionHeader extends StatelessWidget {
   /// Trần nói của phiên; 0 = chưa biết, lúc đó chỉ hiện số đã nói, không vẽ mẫu số/thanh.
   final int budgetSeconds;
 
-  final List<String> focusTags;
   final VoidCallback onClose;
 
   /// Đổi màu từ 85% ngân sách để học sinh kịp gói ý lại, thay vì phiên đóng đột ngột.
@@ -1312,10 +1309,6 @@ class _SessionHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (focusTags.isNotEmpty) ...[
-            const SizedBox(width: 8),
-            Flexible(child: TagChip.orange(focusTags.first)),
-          ],
           const SizedBox(width: 4),
           IconButton(
             onPressed: onClose,

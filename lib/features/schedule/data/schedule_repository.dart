@@ -1,7 +1,6 @@
 import '../../teacher_exam/data/models/exam_detail.dart';
 import '../../teacher_exam/data/teacher_exam_graphql_api.dart';
 import 'models/exam_room_schedule.dart';
-import 'models/exam_schedule.dart';
 import 'schedule_api.dart';
 
 class TeacherScheduleItem {
@@ -18,8 +17,14 @@ class ScheduleRepository {
   final ScheduleApi _api;
   final TeacherExamGraphQLApi? _teacherApi;
 
-  Future<List<ExamSchedule>> getExams() => _api.getExams();
-
+  /// Ca thi của học sinh, mỗi ca đã kèm sẵn bài thi (`ExamRoomSchedule.exam`).
+  ///
+  /// Trước đây hàm này gọi thêm REST `/v1/exams` rồi ghép theo examId. Cách đó hỏng hai
+  /// tầng: (1) REST trả `StudentExamSummaryResponse` -- các khoá là `title`/`examDate`,
+  /// không phải `name`/`openAt` mà `ExamSchedule.fromJson` chờ (model đó viết cho type
+  /// `Exam` của GraphQL), nên ép kiểu ném ngay lập tức và cả màn lịch báo lỗi; (2) kể cả
+  /// nếu đọc được thì danh sách bài thi có phân trang, bài thi rơi ngoài trang đầu sẽ làm
+  /// ca thi biến mất không một lời báo.
   Future<List<ExamRoomSchedule>> getStudentSchedule() =>
       _api.getMyExamSchedules();
 

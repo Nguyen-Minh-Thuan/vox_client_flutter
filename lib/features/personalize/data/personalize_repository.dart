@@ -9,8 +9,6 @@ import 'models/practice_history_entry.dart';
 import 'models/practice_session.dart';
 import 'models/practice_topic.dart';
 import 'models/session_summary.dart';
-import 'models/topic_suggestion.dart';
-import 'models/weakness.dart';
 import 'personalize_api.dart';
 
 /// Data source for the personalized-practice feature.
@@ -27,16 +25,33 @@ class PersonalizeRepository {
   final ProfileApi _profileApi;
 
   /// No single query returns this shape -- assembled from real
-  /// `myPracticeDashboardStats`, `practiceTopicOffers` (bucket FOR_YOU),
-  /// `myWeaknessProfile` and `profile { fullName }`. `sessionsThisWeek` is a
+  /// `myPracticeDashboardStats`, `practiceTopicOffers` (bucket FOR_YOU) and
+  /// `profile { fullName }`. `sessionsThisWeek` is a
   /// real count of `myPracticeHistory` entries since the start of this
   /// calendar week (Monday) -- there's no "weekly goal target" anywhere in
   /// the backend, so no "/N" is shown (see conversation: confirmed no such
   /// field exists rather than guessing a number).
+  ///
+  /// Trước đây còn một lượt `myWeaknessProfile` nữa, chỉ để dựng dải "Tập trung tuần này".
+  /// Bỏ dải đó thì bớt luôn một request tuần tự mỗi lần mở tab.
+  /// Ba con số ở đầu trang Hồ sơ: số buổi đã xong, điểm trung bình, chuỗi ngày liên tiếp.
+  ///
+  /// Gọi thẳng `myPracticeDashboardStats` chứ KHÔNG dùng lại [getDashboard]: hàm kia chạy 4
+  /// lượt tuần tự (stats + lô chào + lịch sử + hồ sơ) và một lượt trong đó có thể phải chờ AI
+  /// sinh chủ đề -- quá đắt cho một màn chỉ hiển thị 3 số.
+  Future<({int sessionsDone, double averageScore, int streakDays})>
+      getPracticeStats() async {
+    final json = await _api.getDashboardStats();
+    return (
+      sessionsDone: (json['sessionsDone'] as num?)?.toInt() ?? 0,
+      averageScore: (json['averageScore'] as num?)?.toDouble() ?? 0,
+      streakDays: (json['streakDays'] as num?)?.toInt() ?? 0,
+    );
+  }
+
   Future<PracticeDashboard> getDashboard() async {
     final stats = await _api.getDashboardStats();
     final offers = await _api.getTopicOffers(bucket: 'FOR_YOU');
-    final weakness = await getWeaknessProfile();
     final history = await getPracticeHistory(limit: 50);
     final profile = await _profileApi.getProfile();
 
@@ -77,19 +92,12 @@ class PersonalizeRepository {
       sessionsDone: (stats['sessionsDone'] as num?)?.toInt() ?? 0,
       averageScore: (stats['averageScore'] as num?)?.toDouble() ?? 0,
       sessionsThisWeek: sessionsThisWeek,
-      weeklyFocus: weakness.criteria.take(2).toList(),
       suggestions: topics.skip(1).take(4).toList(),
     );
   }
 
-  static const _bucketByFilter = {
-    TopicFilter.forYou: 'FOR_YOU',
-    TopicFilter.byGoal: 'BY_GOAL',
-    TopicFilter.byWeakness: 'BY_WEAKNESS',
-  };
-
-  /// `forYou`/`byGoal`/`byWeakness` each map to a real ranking bucket on
-  /// `practiceTopicOffers` (gói 11 mục 2.6b); `saved` calls `mySavedTopics`.
+  /// `forYou` maps to the only remaining ranking bucket on `practiceTopicOffers`;
+  /// `saved` calls `mySavedTopics`.
   /// [round] và [excludeTopicIds] là đường dẫn của nút "Đổi gợi ý".
   ///
   /// Backend đọc `round >= 2` để nâng tỉ lệ thăm dò ε từ 0,10 lên 0,30 (xem
@@ -111,7 +119,7 @@ class PersonalizeRepository {
           .toList();
     }
     final offers = await _api.getTopicOffers(
-      bucket: _bucketByFilter[filter]!,
+      bucket: 'FOR_YOU',
       round: round,
       excludeTopicIds: excludeTopicIds,
     );
@@ -149,19 +157,9 @@ class PersonalizeRepository {
     return PracticeTopic.fromOffer(result.topic!, origin: 'KEYWORD');
   }
 
-  /// Gợi ý chủ đề rút ra từ lời học sinh nói trong bài, đang chờ nhận/bỏ.
-  Future<List<TopicSuggestion>> getPendingTopicSuggestions() async {
-    final rows = await _api.getPendingTopicSuggestions();
-    return rows.map(TopicSuggestion.fromJson).toList();
-  }
-
-  /// Nhận (`accept = true`) thì backend tạo `practice_topic` thật và gợi ý chuyển ACCEPTED;
-  /// bỏ thì chuyển REJECTED và tên đó vào danh sách chống đề xuất lại.
-  ///
-  /// Cả hai đều làm giảm số PENDING, tức mở lại cổng `pending >= 2` cho lượt sinh sau.
-  Future<void> respondToTopicSuggestion(String suggestionId, bool accept) {
-    return _api.respondToTopicSuggestion(suggestionId, accept);
-  }
+  // GỠ 2026-08-06: getPendingTopicSuggestions / respondToTopicSuggestion. Cả hai chỉ phục vụ
+  // gợi ý suy ra TỪ LỜI HỌC SINH NÓI, đã bỏ ở backend. generateTopicFromKeyword ngay bên trên
+  // là đường khác -- học sinh chủ động gõ -- và vẫn chạy.
 
   /// Bao lâu thì hỏi lại kết quả dựng đề, và bỏ cuộc sau bao lâu. Dựng đề chậm là khi phải
   /// nhờ AI sinh câu mới; pipeline fast bên Python thường xong trong ~5-8s nên 45s là dư
@@ -203,7 +201,6 @@ class PersonalizeRepository {
       id: sessionJson['id'] as String,
       topicId: (sessionJson['topicId'] as String?) ?? topic.id,
       topicTitle: (sessionJson['topicName'] as String?) ?? topic.title,
-      focusTags: topic.focusTags,
       turns: const [],
     );
     return (
@@ -353,6 +350,10 @@ class PersonalizeRepository {
       minutes: ((detail['durationSeconds'] as num?)?.toInt() ?? 0) ~/ 60,
       score: currentScore,
       delta: previousScore == null ? null : currentScore - previousScore,
+      // Thang chấm đọc từ CHÍNH phiên, không viết cứng: phiên từ V13 là 0-100, phiên cũ theo
+      // thang rubric đã áp lúc đó. Mặc định 0/100 chỉ để đọc được payload cũ chưa có trường này.
+      scoreScaleMin: (detail['scoreScaleMin'] as num?)?.toDouble() ?? 0,
+      scoreScaleMax: (detail['scoreScaleMax'] as num?)?.toDouble() ?? 100,
       // GỘP theo tiêu chí. `criterionScores` trả về một dòng cho mỗi (bài chấm × tiêu chí),
       // nên buổi có 2 câu đã chấm sẽ ra 10 dòng và màn hình hiện "Ngữ pháp" hai lần với hai
       // điểm khác nhau -- trong khi nhãn thẻ ghi "5 tiêu chí". Trung bình cộng các câu, cùng
@@ -505,17 +506,14 @@ class PersonalizeRepository {
     }
   }
 
-  /// Maps to `myWeaknessProfile` — real, not `PersonalizeDemoData`.
-  Future<WeaknessProfile> getWeaknessProfile() async {
-    final json = await _api.getWeaknessProfile();
-    return WeaknessProfile.fromJson(json);
-  }
-
   /// Maps to `saveTopic(topicId)`.
   Future<void> saveTopic(String topicId) => _api.saveTopic(topicId);
 
   /// Maps to `unsaveTopic(topicId)`.
   Future<void> unsaveTopic(String topicId) => _api.unsaveTopic(topicId);
+
+  /// Maps to `dismissTopicOffer(topicId)` — "không thích chủ đề này".
+  Future<void> dismissTopicOffer(String topicId) => _api.dismissTopicOffer(topicId);
 
   /// Maps to `pickRandomTopic` — lối B "chọn giúp tôi". Gắn `EXPLORATION` để tín hiệu sở
   /// thích ghi 0.60 thay vì 0.95: hệ thống chọn hộ thì không phải học sinh thích chủ đề đó.

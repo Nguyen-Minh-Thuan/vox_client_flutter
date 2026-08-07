@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
-import '../../../l10n/app_localizations.dart';
 import '../data/models/practice_session.dart';
-import '../data/models/weakness.dart';
 
 /// Resolves the icon names carried by the models onto Material icons.
 ///
@@ -91,41 +89,6 @@ CorrectionStyle styleForCorrection(CorrectionType type) {
         icon: Icons.speed,
         underline: AppColors.secondary,
       );
-  }
-}
-
-/// Badge colours for a weakness severity chip.
-({Color bg, Color fg}) severityColors(WeaknessSeverity severity) {
-  switch (severity) {
-    case WeaknessSeverity.severe:
-      return (bg: AppColors.dangerBg, fg: AppColors.danger);
-    case WeaknessSeverity.medium:
-      return (bg: AppColors.chipOrangeBg, fg: AppColors.chipOrangeFg);
-    case WeaknessSeverity.mild:
-      return (bg: AppColors.chipNeutralBg, fg: AppColors.chipNeutralFg);
-  }
-}
-
-String severityLabel(AppLocalizations l10n, WeaknessSeverity severity) {
-  switch (severity) {
-    case WeaknessSeverity.severe:
-      return l10n.pzWeaknessSevere;
-    case WeaknessSeverity.medium:
-      return l10n.pzWeaknessMedium;
-    case WeaknessSeverity.mild:
-      return l10n.pzWeaknessMild;
-  }
-}
-
-/// Bar colour for a weakness meter — red when severe, muted when mild.
-Color severityBarColor(WeaknessSeverity severity) {
-  switch (severity) {
-    case WeaknessSeverity.severe:
-      return AppColors.danger;
-    case WeaknessSeverity.medium:
-      return AppColors.warning;
-    case WeaknessSeverity.mild:
-      return AppColors.muted;
   }
 }
 

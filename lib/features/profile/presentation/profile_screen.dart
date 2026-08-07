@@ -35,8 +35,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     secureStorage: SecureStorage(),
   );
 
+  final _personalizeRepository = PersonalizeRepository();
+
   Profile? _profile;
   bool _loading = true;
+
+  /// Ba số luyện tập. Trước 2026-08-06 ba ô này in cứng '24' / '7.8' / '12' trong mã -- số
+  /// giả, giống hệt nhau ở mọi tài khoản. Nay lấy từ `myPracticeDashboardStats`.
+  ({int sessionsDone, double averageScore, int streakDays})? _stats;
 
   Future<void> _logout() async {
     await _authRepository.logout();
@@ -66,6 +72,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+    // Tách khỏi khối trên: ba ô thống kê là phần phụ, hỏng thì để trống chứ KHÔNG được đẩy cả
+    // trang hồ sơ vào trạng thái lỗi -- tên, email, đăng xuất vẫn phải dùng được.
+    await _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    // Kiểm KHẲNG ĐỊNH là STUDENT, không phải "khác TEACHER": query
+    // `myPracticeDashboardStats` gắn @PreAuthorize("hasRole('STUDENT')"), nên SCHOOL_ADMIN
+    // lọt qua chốt phủ định rồi ăn AuthorizationDeniedException -- Flutter nuốt lỗi nên người
+    // dùng chỉ thấy ba dấu '—', còn log backend thì đầy stack trace mỗi lần mở trang Hồ sơ.
+    if (_profile?.roleCode != 'STUDENT') return;
+    try {
+      final stats = await _personalizeRepository.getPracticeStats();
+      if (!mounted) return;
+      setState(() => _stats = stats);
+    } catch (_) {
+      // Để nguyên null -> ba ô hiện '—'.
     }
   }
 
@@ -199,14 +223,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             children: [
-              if (_profile?.roleCode != 'TEACHER') ...[
+              // Chỉ học sinh: ba số này đo buổi luyện tập, nhà trường và giáo viên không có
+              // buổi nào nên hiện ba dấu '—' là nhiễu chứ không phải thông tin.
+              if (_profile?.roleCode == 'STUDENT') ...[
                 Row(
                   children: [
-                    Expanded(child: _StatBox(value: '24', label: l10n.statPracticesDone)),
+                    Expanded(
+                      child: _StatBox(
+                        value: _stats == null ? '—' : '${_stats!.sessionsDone}',
+                        label: l10n.statPracticesDone,
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    Expanded(child: _StatBox(value: '7.8', label: l10n.statAverageScore)),
+                    Expanded(
+                      child: _StatBox(
+                        // Chưa xong buổi nào thì trung bình là 0 -- in "0.0" trông như bị
+                        // chấm 0 điểm. Chưa có gì để trung bình thì nói thẳng là chưa có.
+                        value: _stats == null || _stats!.sessionsDone == 0
+                            ? '—'
+                            : _stats!.averageScore.toStringAsFixed(1),
+                        label: l10n.statAverageScore,
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    Expanded(child: _StatBox(value: '12', label: l10n.statDayStreak)),
+                    Expanded(
+                      child: _StatBox(
+                        value: _stats == null ? '—' : '${_stats!.streakDays}',
+                        label: l10n.statDayStreak,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
