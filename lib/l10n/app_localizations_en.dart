@@ -129,6 +129,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationsGroupEarlier => 'Earlier';
 
   @override
+  String get notificationsEmptyTitle => 'No notifications yet';
+
+  @override
+  String get notificationsEmptyBody =>
+      'Exam results, appeal updates and grading reminders will show up here.';
+
+  @override
+  String notificationsLoadError(String error) {
+    return 'Could not load your notifications.\n$error';
+  }
+
+  @override
+  String get notificationsRetry => 'Retry';
+
+  @override
+  String get notificationsMarkAllReadError =>
+      'Could not mark them as read, please try again.';
+
+  @override
+  String get notificationsTimeNow => 'Just now';
+
+  @override
+  String notificationsTimeMinutes(int count) {
+    return '${count}m ago';
+  }
+
+  @override
+  String notificationsTimeHours(int count) {
+    return '${count}h ago';
+  }
+
+  @override
+  String notificationsTimeDays(int count) {
+    return '${count}d ago';
+  }
+
+  @override
   String get scheduleTitle => 'Your Schedules';
 
   @override

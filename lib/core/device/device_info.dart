@@ -1,31 +1,23 @@
+/// Thiết bị gửi kèm request đăng nhập (`ClientDeviceRequest` bên backend).
+///
+/// Không mang push token: thiết bị nhận thông báo được đăng ký riêng bằng FID
+/// sau khi đăng nhập -- xem `PushMessagingService.registerDevice`.
 class DeviceInfo {
   final String deviceId;
   final String deviceName;
   final String platform;
-  final String? pushToken;
 
   DeviceInfo({
     required this.deviceId,
     required this.deviceName,
     required this.platform,
-    this.pushToken
   });
-
-  DeviceInfo copyWith({String? pushToken}) {
-    return DeviceInfo(
-      deviceId: deviceId,
-      deviceName: deviceName,
-      platform: platform,
-      pushToken: pushToken ?? this.pushToken
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return {
       'deviceId': deviceId,
       'deviceName': deviceName,
       'platform': platform,
-      if (pushToken != null) 'pushToken': pushToken
     };
   }
 }

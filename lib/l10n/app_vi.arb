@@ -40,6 +40,43 @@
   "notificationsMarkAllRead": "Đánh dấu đã đọc tất cả",
   "notificationsGroupNew": "Mới",
   "notificationsGroupEarlier": "Trước đó",
+  "notificationsEmptyTitle": "Chưa có thông báo nào",
+  "notificationsEmptyBody": "Điểm thi, kết quả phúc khảo và nhắc hạn chấm bài sẽ hiện ở đây.",
+  "notificationsLoadError": "Không thể tải thông báo.\n{error}",
+  "@notificationsLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsRetry": "Thử lại",
+  "notificationsMarkAllReadError": "Không đánh dấu đã đọc được, vui lòng thử lại.",
+  "notificationsTimeNow": "Vừa xong",
+  "notificationsTimeMinutes": "{count} phút trước",
+  "@notificationsTimeMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsTimeHours": "{count} giờ trước",
+  "@notificationsTimeHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsTimeDays": "{count} ngày trước",
+  "@notificationsTimeDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "scheduleTitle": "Lịch của bạn",
   "scheduleLoadError": "Không thể tải lịch của bạn.\n{error}",
   "@scheduleLoadError": {

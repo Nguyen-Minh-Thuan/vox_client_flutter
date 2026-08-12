@@ -338,6 +338,60 @@ abstract class AppLocalizations {
   /// **'Earlier'**
   String get notificationsGroupEarlier;
 
+  /// No description provided for @notificationsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications yet'**
+  String get notificationsEmptyTitle;
+
+  /// No description provided for @notificationsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Exam results, appeal updates and grading reminders will show up here.'**
+  String get notificationsEmptyBody;
+
+  /// No description provided for @notificationsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your notifications.\n{error}'**
+  String notificationsLoadError(String error);
+
+  /// No description provided for @notificationsRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get notificationsRetry;
+
+  /// No description provided for @notificationsMarkAllReadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not mark them as read, please try again.'**
+  String get notificationsMarkAllReadError;
+
+  /// No description provided for @notificationsTimeNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get notificationsTimeNow;
+
+  /// No description provided for @notificationsTimeMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}m ago'**
+  String notificationsTimeMinutes(int count);
+
+  /// No description provided for @notificationsTimeHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}h ago'**
+  String notificationsTimeHours(int count);
+
+  /// No description provided for @notificationsTimeDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}d ago'**
+  String notificationsTimeDays(int count);
+
   /// No description provided for @scheduleTitle.
   ///
   /// In en, this message translates to:

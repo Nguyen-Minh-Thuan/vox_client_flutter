@@ -40,6 +40,43 @@
   "notificationsMarkAllRead": "Mark all read",
   "notificationsGroupNew": "New",
   "notificationsGroupEarlier": "Earlier",
+  "notificationsEmptyTitle": "No notifications yet",
+  "notificationsEmptyBody": "Exam results, appeal updates and grading reminders will show up here.",
+  "notificationsLoadError": "Could not load your notifications.\n{error}",
+  "@notificationsLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsRetry": "Retry",
+  "notificationsMarkAllReadError": "Could not mark them as read, please try again.",
+  "notificationsTimeNow": "Just now",
+  "notificationsTimeMinutes": "{count}m ago",
+  "@notificationsTimeMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsTimeHours": "{count}h ago",
+  "@notificationsTimeHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsTimeDays": "{count}d ago",
+  "@notificationsTimeDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "scheduleTitle": "Your Schedules",
   "scheduleLoadError": "Could not load your schedule.\n{error}",
   "@scheduleLoadError": {

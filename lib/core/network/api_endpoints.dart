@@ -19,7 +19,13 @@ class ApiEndpoints {
   static const String login = "/v1/auth/login";
   static const String googleLogin = "/oauth2/google/token";
   static const String logout = "/v1/auth/logout";
-  static const String pushToken = "/v1/devices/push-token";
+  /// Thiết bị nhận thông báo đẩy. Định danh là FID (Firebase Installation ID),
+  /// KHÔNG phải FCM token -- backend gửi push bằng `MulticastMessage.addAllFids`.
+  static const String notificationDevices = "/v1/notifications/devices";
+  static String notificationDevice(String installationId) =>
+      "/v1/notifications/devices/$installationId";
+  static String notificationRead(String id) => "/v1/notifications/$id/read";
+  static const String notificationsReadAll = "/v1/notifications/read-all";
   static const String examAppeals = "/v1/exam-appeals";
 
   static const String classTests = "/v1/class-tests";

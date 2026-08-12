@@ -10,7 +10,7 @@ import '../../profile/data/profile_repository.dart';
 import '../../schedule/data/models/exam_schedule.dart';
 import '../data/home_exam_api.dart';
 import '../data/home_exam_repository.dart';
-import './notifications_screen.dart';
+import '../../notifications/presentation/notification_bell.dart';
 
 /// Tab 1 — Home
 
@@ -88,13 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              IconCircle(
-                Icons.notifications_none,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const NotificationsScreen()),
-                ),
-              ),
+              const NotificationBell(),
             ],
           ),
         ),
@@ -272,7 +266,7 @@ class _ContinueCard extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.6,
-              color: Colors.white.withOpacity(0.6),
+              color: Colors.white.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 5),
@@ -291,13 +285,13 @@ class _ContinueCard extends StatelessWidget {
               exam.description!,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.6)),
+              style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.6)),
             ),
           ],
           const SizedBox(height: 4),
           Text(
             _examTimeLabel(context, exam.closeAt),
-            style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.6)),
+            style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.6)),
           ),
           const SizedBox(height: 14),
           Align(

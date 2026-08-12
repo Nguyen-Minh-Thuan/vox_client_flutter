@@ -13,7 +13,7 @@ import '../data/models/school_class.dart';
 import '../data/teacher_exam_graphql_api.dart';
 import '../data/teacher_exam_repository.dart';
 import '../data/teacher_exam_rest_api.dart';
-import '../../home/presentation/notifications_screen.dart';
+import '../../notifications/presentation/notification_bell.dart';
 import 'centralized_exam_detail_screen.dart';
 import 'class_test_detail_screen.dart';
 import 'class_test_form_screen.dart';
@@ -158,13 +158,7 @@ class _TeacherExamListScreenState extends State<TeacherExamListScreen> {
                     ],
                   ),
                 ),
-                IconCircle(
-                  Icons.notifications_none,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const NotificationsScreen()),
-                  ),
-                ),
+                const NotificationBell(),
               ],
             ),
           ),

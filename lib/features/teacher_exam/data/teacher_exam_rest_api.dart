@@ -20,14 +20,12 @@ class TeacherExamRestApi {
     final response = await _client.post(ApiEndpoints.classTests, data: {
       'schoolClassId': schoolClassId,
       'name': name,
-      if (description != null) 'description': description,
+      'description': ?description,
       if (openAt != null) 'openAt': openAt.toUtc().toIso8601String(),
       if (closeAt != null) 'closeAt': closeAt.toUtc().toIso8601String(),
-      if (questionIds != null) 'questionIds': questionIds,
-      if (existingBlueprintId != null)
-        'existingBlueprintId': existingBlueprintId,
-      if (existingBlueprintVersionId != null)
-        'existingBlueprintVersionId': existingBlueprintVersionId,
+      'questionIds': ?questionIds,
+      'existingBlueprintId': ?existingBlueprintId,
+      'existingBlueprintVersionId': ?existingBlueprintVersionId,
     });
     return ExamDetail.fromJson(
       response.data['exam'] as Map<String, dynamic>,
@@ -42,8 +40,8 @@ class TeacherExamRestApi {
     DateTime? closeAt,
   }) {
     return _client.put(ApiEndpoints.classTestById(examId), data: {
-      if (name != null) 'name': name,
-      if (description != null) 'description': description,
+      'name': ?name,
+      'description': ?description,
       if (openAt != null) 'openAt': openAt.toUtc().toIso8601String(),
       if (closeAt != null) 'closeAt': closeAt.toUtc().toIso8601String(),
     });
@@ -66,7 +64,7 @@ class TeacherExamRestApi {
   }) {
     return _client.patch(ApiEndpoints.classTestStatus(examId), data: {
       'action': action,
-      if (note != null) 'note': note,
+      'note': ?note,
     });
   }
 

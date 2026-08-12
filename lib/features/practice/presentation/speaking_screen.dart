@@ -64,7 +64,7 @@ class _SpeakingScreenState extends State<SpeakingScreen>
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
                   const Spacer(),
@@ -85,7 +85,7 @@ class _SpeakingScreenState extends State<SpeakingScreen>
                           borderRadius: BorderRadius.circular(99),
                           color: i <= _question
                               ? AppColors.secondary
-                              : Colors.white.withOpacity(0.12),
+                              : Colors.white.withValues(alpha: 0.12),
                         ),
                       ),
                     ),
@@ -98,9 +98,9 @@ class _SpeakingScreenState extends State<SpeakingScreen>
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.06),
+                  color: Colors.white.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,7 +126,7 @@ class _SpeakingScreenState extends State<SpeakingScreen>
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.8,
-                            color: Colors.white.withOpacity(0.5),
+                            color: Colors.white.withValues(alpha: 0.5),
                           ),
                         ),
                         const Spacer(),
@@ -148,14 +148,14 @@ class _SpeakingScreenState extends State<SpeakingScreen>
                     Row(
                       children: [
                         Icon(Icons.replay,
-                            size: 16, color: Colors.white.withOpacity(0.55)),
+                            size: 16, color: Colors.white.withValues(alpha: 0.55)),
                         const SizedBox(width: 6),
                         Text(
                           'Replay prompt (1 left)',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white.withOpacity(0.55),
+                            color: Colors.white.withValues(alpha: 0.55),
                           ),
                         ),
                       ],
@@ -202,7 +202,7 @@ class _SpeakingScreenState extends State<SpeakingScreen>
                       color: AppColors.danger,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.danger.withOpacity(0.35 * (1 - t)),
+                          color: AppColors.danger.withValues(alpha: 0.35 * (1 - t)),
                           blurRadius: 8,
                           spreadRadius: 14 * t,
                         ),
@@ -226,7 +226,7 @@ class _SpeakingScreenState extends State<SpeakingScreen>
                       label: const Text('Re-record'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: BorderSide(color: Colors.white.withOpacity(0.25)),
+                        side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
                         minimumSize: const Size(0, 54),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(99),

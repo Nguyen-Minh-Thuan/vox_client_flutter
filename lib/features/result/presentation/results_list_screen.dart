@@ -113,7 +113,11 @@ class _ResultsListCoreState extends State<_ResultsListCore> {
                             group: group,
                             onOpen: _openResult,
                             onToggle: () => setState(() {
-                              if (expanded) _expandedExamIds.remove(group.examId); else _expandedExamIds.add(group.examId);
+                              if (expanded) {
+                                _expandedExamIds.remove(group.examId);
+                              } else {
+                                _expandedExamIds.add(group.examId);
+                              }
                             }),
                           );
                         },

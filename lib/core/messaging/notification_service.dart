@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../app/router.dart';
-import '../../features/home/presentation/notifications_screen.dart';
+import '../../features/notifications/presentation/notifications_screen.dart';
 import '../storage/preference_storage.dart';
-import 'notification_store.dart';
 
+/// Thông báo cục bộ (khay hệ thống). Chỉ cần cho push tới lúc app đang MỞ:
+/// khi app ở nền hoặc đã thoát, FCM có sẵn khối `notification` nên hệ điều hành
+/// tự dựng khay, plugin này không tham gia.
 class NotificationService {
   NotificationService._();
   static final _plugin = FlutterLocalNotificationsPlugin();
@@ -20,7 +22,7 @@ class NotificationService {
         iOS: iosInit,
         linux: linuxInit,
       ),
-      onDidReceiveNotificationResponse: _onTap,
+      onDidReceiveNotificationResponse: (_) => openNotifications(),
     );
     await _plugin
         .resolvePlatformSpecificImplementation<
@@ -28,24 +30,19 @@ class NotificationService {
         ?.requestNotificationsPermission();
   }
 
-  static void _onTap(NotificationResponse response) {
-    final id = response.payload;
-    if (id == null) return;
-    openNotifications(id);
-  }
-
-  /// Shared tap-handling entry point: marks the notification read and
-  /// navigates to the notifications screen. Used both by local-notification
-  /// taps and by push notification taps (foreground/background/terminated).
-  static void openNotifications(String id) {
-    NotificationStore.instance.markRead(id);
+  /// Điểm vào chung khi người dùng bấm vào một thông báo, dù là khay cục bộ hay
+  /// khay hệ thống của FCM.
+  ///
+  /// Không nhận id: payload của push mang `eventType` và khoá điều hướng của
+  /// thực thể (candidateResultId, appealId...), KHÔNG mang id dòng notification,
+  /// nên không có gì để mở đúng một mục. Mở thẳng danh sách là thứ trung thực nhất.
+  static void openNotifications() {
     AppRouter.navigatorKey.currentState?.push(
       MaterialPageRoute(builder: (_) => const NotificationsScreen()),
     );
   }
 
-  /// Shows a local notification using the already-initialized plugin.
-  /// Used by push notifications arriving in the foreground.
+  /// Dựng khay cho push tới lúc app đang mở (foreground).
   static Future<void> show({
     required String title,
     required String body,
@@ -54,13 +51,13 @@ class NotificationService {
     if (!await PreferenceStorage().getNotificationsEnabled()) return;
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
-        'test_channel',
-        'Test Notifications',
+        'vox_notifications',
+        'Vox Notifications',
       ),
       iOS: DarwinNotificationDetails(),
     );
     await _plugin.show(
-      id: payload.hashCode,
+      id: DateTime.now().microsecondsSinceEpoch.remainder(1 << 31),
       title: title,
       body: body,
       notificationDetails: details,

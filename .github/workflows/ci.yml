@@ -1,0 +1,238 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Push lien tiep vao cung mot branch thi chi giu lai lan chay moi nhat.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Bam dung version dang dung o may local (flutter --version).
+  FLUTTER_VERSION: "3.44.0"
+
+jobs:
+  analyze:
+    name: Analyze + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      # .env nam trong .gitignore nhung lai duoc khai bao la asset trong pubspec.yaml,
+      # nen thieu file nay thi moi lenh flutter build/test deu fail ngay o buoc resolve asset.
+      # Gia tri o day chi de compile pass, khong phai secret that.
+      - name: Tao .env placeholder
+        run: |
+          cat > .env <<'EOF'
+          API_URL=https://example.invalid
+          AI_SERVICE_URL=https://example.invalid
+          GOOGLE_SERVER_CLIENT_ID=ci-placeholder
+          EOF
+
+      - run: flutter pub get
+
+      # Chi analyze lib/ va test/: `flutter analyze` khong tham so se quet ca build/,
+      # trong do co source cua package khac (vd firebase_messaging) va bao hang tram loi ao.
+      - name: Analyze
+        run: flutter analyze lib test
+
+      - name: Test
+        run: flutter test
+
+      # Hien tai `dart format` con doi ~60 file, nen chua bat lam gate.
+      # Chay `dart format .` mot lan roi commit, sau do bo comment 2 dong duoi:
+      # - name: Format check
+      #   run: dart format --output=none --set-exit-if-changed lib test
+
+  android:
+    name: Build Android (APK)
+    needs: analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Tao .env placeholder
+        run: |
+          cat > .env <<'EOF'
+          API_URL=https://example.invalid
+          AI_SERVICE_URL=https://example.invalid
+          GOOGLE_SERVER_CLIENT_ID=ci-placeholder
+          EOF
+
+      # android/local.properties cung bi gitignore, nhung settings.gradle.kts doc
+      # flutter.sdk tu do. Khong can tao tay: `flutter build` tu sinh lai file nay
+      # truoc khi goi gradle. Chi luu y la dung gradlew truc tiep se fail.
+      #
+      # google-services.json cung khong co trong repo. Hien tai build van pass vi
+      # android/app/build.gradle.kts khai bao plugin google-services voi `apply false`.
+      # Neu sau nay apply that, them buoc ghi file tu secret truoc khi build:
+      #   - env:
+      #       GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      #     run: echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
+      - name: Build APK
+        run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
+
+  ios:
+    name: Build iOS (no codesign)
+    needs: analyze
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Tao .env placeholder
+        run: |
+          cat > .env <<'EOF'
+          API_URL=https://example.invalid
+          AI_SERVICE_URL=https://example.invalid
+          GOOGLE_SERVER_CLIENT_ID=ci-placeholder
+          EOF
+
+      # --no-codesign: chi verify compile + link, khong can cert/provisioning profile.
+      # ios/Runner/GoogleService-Info.plist bi gitignore nhung khong nam trong
+      # build phase cua Xcode project, nen thieu no build van pass (chi fail runtime).
+      #
+      # Deployment target phai >= 15.0 vi 'firebase-core'/'firebase-messaging' yeu cau
+      # vay; ha xuong 13.0 la job nay do ngay o buoc Target Integrity.
+      - name: Build iOS
+        run: flutter build ios --release --no-codesign
+
+  macos:
+    name: Build macOS
+    needs: analyze
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Tao .env placeholder
+        run: |
+          cat > .env <<'EOF'
+          API_URL=https://example.invalid
+          AI_SERVICE_URL=https://example.invalid
+          GOOGLE_SERVER_CLIENT_ID=ci-placeholder
+          EOF
+
+      - name: Build macOS
+        run: flutter build macos --release
+
+  web:
+    name: Build Web
+    needs: analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Tao .env placeholder
+        run: |
+          cat > .env <<'EOF'
+          API_URL=https://example.invalid
+          AI_SERVICE_URL=https://example.invalid
+          GOOGLE_SERVER_CLIENT_ID=ci-placeholder
+          EOF
+
+      - name: Build Web
+        run: flutter build web --release
+
+  linux:
+    name: Build Linux
+    needs: analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Native deps: gtk cho flutter desktop, libsecret/jsoncpp cho flutter_secure_storage_linux,
+      # libmpv cho media_kit_libs_linux (just_audio_media_kit).
+      - name: Cai native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev \
+            libsecret-1-dev libjsoncpp-dev \
+            libmpv-dev mpv
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Tao .env placeholder
+        run: |
+          cat > .env <<'EOF'
+          API_URL=https://example.invalid
+          AI_SERVICE_URL=https://example.invalid
+          GOOGLE_SERVER_CLIENT_ID=ci-placeholder
+          EOF
+
+      - name: Build Linux
+        run: flutter build linux --release
+
+  windows:
+    name: Build Windows
+    needs: analyze
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Tao .env placeholder
+        shell: bash
+        run: |
+          cat > .env <<'EOF'
+          API_URL=https://example.invalid
+          AI_SERVICE_URL=https://example.invalid
+          GOOGLE_SERVER_CLIENT_ID=ci-placeholder
+          EOF
+
+      - name: Build Windows
+        run: flutter build windows --release

@@ -52,7 +52,7 @@ class GraphQLClient {
   }) async {
     final response = await _dio.post('/graphql', data: {
       'query': query,
-      if (variables != null) 'variables': variables,
+      'variables': ?variables,
     });
 
     final errors = response.data['errors'];

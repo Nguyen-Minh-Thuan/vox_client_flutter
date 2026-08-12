@@ -129,6 +129,43 @@ class AppLocalizationsVi extends AppLocalizations {
   String get notificationsGroupEarlier => 'Trước đó';
 
   @override
+  String get notificationsEmptyTitle => 'Chưa có thông báo nào';
+
+  @override
+  String get notificationsEmptyBody =>
+      'Điểm thi, kết quả phúc khảo và nhắc hạn chấm bài sẽ hiện ở đây.';
+
+  @override
+  String notificationsLoadError(String error) {
+    return 'Không thể tải thông báo.\n$error';
+  }
+
+  @override
+  String get notificationsRetry => 'Thử lại';
+
+  @override
+  String get notificationsMarkAllReadError =>
+      'Không đánh dấu đã đọc được, vui lòng thử lại.';
+
+  @override
+  String get notificationsTimeNow => 'Vừa xong';
+
+  @override
+  String notificationsTimeMinutes(int count) {
+    return '$count phút trước';
+  }
+
+  @override
+  String notificationsTimeHours(int count) {
+    return '$count giờ trước';
+  }
+
+  @override
+  String notificationsTimeDays(int count) {
+    return '$count ngày trước';
+  }
+
+  @override
   String get scheduleTitle => 'Lịch của bạn';
 
   @override
