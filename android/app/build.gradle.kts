@@ -19,7 +19,10 @@ if (hasReleaseSigning) {
 
 android {
     namespace = "com.voxenta.vox"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_secure_storage 11.x's Android AAR requires compileSdk 37+; the
+    // Flutter SDK's default (flutter.compileSdkVersion) is still 36, so pin
+    // it explicitly rather than relying on the tool's default.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
